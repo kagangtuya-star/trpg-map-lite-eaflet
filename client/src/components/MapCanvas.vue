@@ -20,6 +20,7 @@ let map;
 let markerLayer;
 let coordControl;
 let mapContainer;
+let resizeObserver;
 
 const cursorState = reactive({
   visible: false,
@@ -52,6 +53,14 @@ function overzoomMax() {
   return nativeMaxZoom() + 2;
 }
 
+function mapAspectRatio() {
+  const bounds = props.campaign.tile_bounds;
+  if (!bounds) return '16 / 9';
+  const width = Math.max(1, bounds.east - bounds.west);
+  const height = Math.max(1, bounds.north - bounds.south);
+  return `${width} / ${height}`;
+}
+
 function minFillZoom() {
   const bounds = props.campaign.tile_bounds;
   if (!bounds || !map) return 0;
@@ -71,6 +80,12 @@ function applyZoomRange() {
   }
 }
 
+function resizeMapToContainer() {
+  if (!map) return;
+  map.invalidateSize({ animate: false });
+  applyZoomRange();
+}
+
 function initMap() {
   if (map) return;
   const bounds = campaignBounds();
@@ -87,6 +102,10 @@ function initMap() {
   mapContainer = map.getContainer();
   mapContainer.addEventListener('pointermove', updateCustomCursor);
   mapContainer.addEventListener('pointerleave', hideCustomCursor);
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(resizeMapToContainer);
+    resizeObserver.observe(mapContainer);
+  }
 
   L.tileLayer(buildGoogleTileTemplate(`/tiles/${props.campaign.id}`), {
     noWrap: true,
@@ -219,6 +238,8 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = undefined;
   if (mapContainer) {
     mapContainer.removeEventListener('pointermove', updateCustomCursor);
     mapContainer.removeEventListener('pointerleave', hideCustomCursor);
@@ -231,7 +252,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="h-full w-full map-canvas" :class="{ 'is-placing-marker': mode === 'edit' && activeTool === 'marker' }">
+  <div
+    class="h-full w-full map-canvas"
+    :class="{ 'is-placing-marker': mode === 'edit' && activeTool === 'marker' }"
+    :style="{ '--map-aspect-ratio': mapAspectRatio() }"
+  >
     <div id="map" class="h-full w-full"></div>
     <img
       v-if="cursorState.visible && cursorState.url"
