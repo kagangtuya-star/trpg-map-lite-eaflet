@@ -141,4 +141,11 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Runtime artifacts
+data/
+public/uploads/
+public/tiles/
 /.codanna
+/specs
+/plans
