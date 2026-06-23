@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { apiClient } from '../lib/api-client.js';
@@ -15,9 +15,101 @@ const loading = ref(false);
 const uploadingCursor = ref('');
 const error = ref('');
 const result = ref(null);
+const mapInput = ref(null);
+const mapPreviewUrl = ref('');
+const isDraggingMap = ref(false);
+const copiedShareLink = ref(false);
+
+const UploadCloudIcon = defineComponent({
+  name: 'UploadCloudIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.8',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'aria-hidden': 'true'
+      },
+      [
+        h('path', { d: 'M16 16l-4-4-4 4' }),
+        h('path', { d: 'M12 12v9' }),
+        h('path', { d: 'M20.4 18.1A5 5 0 0018 8.7 7 7 0 104.3 15.3' })
+      ]
+    );
+  }
+});
+
+const EditIcon = defineComponent({
+  name: 'EditIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.8',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'aria-hidden': 'true'
+      },
+      [h('path', { d: 'M12 20h9' }), h('path', { d: 'M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4Z' })]
+    );
+  }
+});
+
+const CopyIcon = defineComponent({
+  name: 'CopyIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.8',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'aria-hidden': 'true'
+      },
+      [h('rect', { x: '8', y: '8', width: '12', height: '12', rx: '2' }), h('path', { d: 'M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2' })]
+    );
+  }
+});
+
+const shareUrl = computed(() => {
+  if (!result.value?.view_token || typeof window === 'undefined') return '';
+  return new URL(`/${result.value.view_token}`, window.location.origin).href;
+});
+
+function revokeMapPreview() {
+  if (!mapPreviewUrl.value) return;
+  URL.revokeObjectURL(mapPreviewUrl.value);
+  mapPreviewUrl.value = '';
+}
+
+function setMapFile(selectedFile) {
+  if (!selectedFile) return;
+  file.value = selectedFile;
+  revokeMapPreview();
+  mapPreviewUrl.value = URL.createObjectURL(selectedFile);
+}
 
 function onFileChange(event) {
-  file.value = event.target.files?.[0] || null;
+  setMapFile(event.target.files?.[0]);
+}
+
+function onMapDrop(event) {
+  isDraggingMap.value = false;
+  setMapFile(event.dataTransfer?.files?.[0]);
+}
+
+function openMapPicker() {
+  mapInput.value?.click();
 }
 
 async function uploadCursor(event, target) {
@@ -60,6 +152,29 @@ async function createCampaign() {
     loading.value = false;
   }
 }
+
+async function copyShareLink() {
+  if (!shareUrl.value) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(shareUrl.value);
+  } else {
+    const textarea = document.createElement('textarea');
+    textarea.value = shareUrl.value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.append(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+  copiedShareLink.value = true;
+  window.setTimeout(() => {
+    copiedShareLink.value = false;
+  }, 1800);
+}
+
+onBeforeUnmount(revokeMapPreview);
 </script>
 
 <template>
@@ -75,37 +190,53 @@ async function createCampaign() {
         </button>
       </div>
 
-      <label>
+      <label class="field-block">
         {{ t('create.campaignName') }}
         <input v-model="name" />
       </label>
-      <label>
-        {{ t('create.mapImage') }}
-        <input type="file" accept="image/*" @change="onFileChange" />
-      </label>
-      <label>
+      <div class="field-block">
+        <span>{{ t('create.mapImage') }}</span>
+        <button
+          type="button"
+          class="map-dropzone"
+          :class="{ 'is-dragging': isDraggingMap, 'has-preview': mapPreviewUrl }"
+          @click="openMapPicker"
+          @dragenter.prevent="isDraggingMap = true"
+          @dragover.prevent="isDraggingMap = true"
+          @dragleave.prevent="isDraggingMap = false"
+          @drop.prevent="onMapDrop"
+        >
+          <img v-if="mapPreviewUrl" class="map-dropzone__preview" :src="mapPreviewUrl" alt="" />
+          <span v-else class="map-dropzone__empty">
+            <UploadCloudIcon class="map-dropzone__icon" />
+            <span>{{ t('create.dropzoneHint') }}</span>
+          </span>
+        </button>
+        <input ref="mapInput" class="sr-only-file" type="file" accept="image/*" tabindex="-1" @change="onFileChange" />
+      </div>
+      <label class="field-block">
         {{ t('create.defaultCursorUrl') }}
         <span class="file-url-row">
           <input v-model="defaultCursorUrl" />
-          <span class="upload-button">
-            {{ uploadingCursor === 'default' ? t('create.uploadingCursor') : t('create.uploadCursor') }}
+          <span class="upload-button icon-upload-button" :title="t('create.uploadCursor')">
+            <UploadCloudIcon />
             <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'default')" />
           </span>
         </span>
         <img v-if="defaultCursorUrl" class="asset-preview asset-preview--marker" :src="defaultCursorUrl" alt="" />
       </label>
-      <label>
+      <label class="field-block">
         {{ t('create.pointerCursorUrl') }}
         <span class="file-url-row">
           <input v-model="pointerCursorUrl" />
-          <span class="upload-button">
-            {{ uploadingCursor === 'pointer' ? t('create.uploadingCursor') : t('create.uploadCursor') }}
+          <span class="upload-button icon-upload-button" :title="t('create.uploadCursor')">
+            <UploadCloudIcon />
             <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'pointer')" />
           </span>
         </span>
         <img v-if="pointerCursorUrl" class="asset-preview asset-preview--cursor" :src="pointerCursorUrl" alt="" />
       </label>
-      <label>
+      <label class="field-block">
         {{ t('create.maxZoom') }}
         <input v-model.number="maxZoom" type="number" min="0" max="8" />
       </label>
@@ -117,10 +248,14 @@ async function createCampaign() {
       <p v-if="error" class="inline-error">{{ error }}</p>
 
       <div v-if="result" class="token-result">
-        <RouterLink :to="`/${result.edit_token}`">{{ t('create.openEditMap') }}</RouterLink>
-        <RouterLink :to="`/${result.view_token}`">{{ t('create.openViewMap') }}</RouterLink>
-        <code>{{ result.edit_token }}</code>
-        <code>{{ result.view_token }}</code>
+        <RouterLink class="result-action-card" :to="`/${result.edit_token}`">
+          <EditIcon />
+          <span>{{ t('create.openEditMode') }}</span>
+        </RouterLink>
+        <button type="button" class="result-action-card" @click="copyShareLink">
+          <CopyIcon />
+          <span>{{ copiedShareLink ? t('create.copiedShareLink') : t('create.copyShareLink') }}</span>
+        </button>
       </div>
     </section>
   </main>
