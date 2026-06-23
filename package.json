@@ -1,0 +1,36 @@
+{
+  "name": "trpg-map-lite-eaflet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/src/server.js",
+    "dev:client": "vite --host 0.0.0.0",
+    "start": "node server/src/server.js",
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "node --test server/test/*.test.js",
+    "test:client": "vitest run client/test/*.test.js",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "better-sqlite3": "^11.10.0",
+    "express": "^5.1.0",
+    "leaflet": "^1.9.4",
+    "multer": "^1.4.5-lts.2",
+    "sharp": "^0.33.5",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "concurrently": "^9.1.2",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4",
+    "tailwindcss": "^3.4.17",
+    "postcss": "^8.5.6",
+    "autoprefixer": "^10.4.21"
+  }
+}

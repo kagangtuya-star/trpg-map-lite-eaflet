@@ -1,0 +1,38 @@
+html,
+body,
+#map {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #14110d;
+}
+
+.custom-magic-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(215, 181, 109, 0.2), 0 0 18px rgba(215, 181, 109, 0.9);
+}
+
+.custom-magic-marker--image {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  object-fit: contain;
+  box-shadow: none;
+}
+
+.magic-tooltip {
+  background: rgba(245, 234, 215, 0.94);
+  color: #1a1208;
+}
+
+.live-coords-display {
+  border-radius: 6px;
+  background: rgba(20, 17, 13, 0.86);
+  color: #f5ead7;
+  padding: 8px 10px;
+}
