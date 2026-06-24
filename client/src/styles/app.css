@@ -346,6 +346,8 @@ button.ghost {
   position: absolute;
   z-index: 700;
   width: min(320px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
   display: grid;
   gap: 10px;
   border: 1px solid var(--line);
