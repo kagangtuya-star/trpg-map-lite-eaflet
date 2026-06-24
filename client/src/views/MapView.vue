@@ -19,6 +19,7 @@ const configPreview = ref(null);
 const activeTool = ref('select');
 const activeMarker = ref(null);
 const popoverPosition = ref(null);
+const savingMarker = ref(false);
 const previewCampaign = computed(() =>
   payload.value?.campaign ? { ...payload.value.campaign, ...(configPreview.value || {}) } : null
 );
@@ -139,9 +140,17 @@ function removeSavedMarker(markerId) {
 }
 
 async function saveMarker(marker) {
-  const result = await apiClient.saveMarker(token.value, marker);
-  applySavedMarker(result.marker);
-  closeMarkerPopover();
+  if (savingMarker.value) return;
+  savingMarker.value = true;
+  try {
+    const result = await apiClient.saveMarker(token.value, marker);
+    applySavedMarker(result.marker);
+    closeMarkerPopover();
+  } catch (cause) {
+    error.value = cause.message;
+  } finally {
+    savingMarker.value = false;
+  }
 }
 
 async function saveMarkerDrag(event) {

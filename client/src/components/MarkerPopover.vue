@@ -132,15 +132,22 @@ onMounted(async () => {
   resizeObserver = new ResizeObserver(measurePopover);
   if (popoverElement.value) resizeObserver.observe(popoverElement.value);
   window.addEventListener('resize', measurePopover);
+  document.addEventListener('pointerdown', handleDocumentPointerDown, true);
 });
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect();
   window.removeEventListener('resize', measurePopover);
+  document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
 });
 
 function save() {
   emit('save', { ...form });
+}
+
+function handleDocumentPointerDown(event) {
+  if (popoverElement.value?.contains(event.target)) return;
+  save();
 }
 
 function selectMarkerIcon(icon) {
