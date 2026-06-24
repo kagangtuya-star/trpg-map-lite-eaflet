@@ -27,7 +27,9 @@ export function applySchema(db) {
       lat REAL NOT NULL,
       lng REAL NOT NULL,
       title TEXT NOT NULL,
+      show_title INTEGER NOT NULL DEFAULT 1,
       description TEXT NOT NULL DEFAULT '',
+      show_description INTEGER NOT NULL DEFAULT 1,
       icon_style TEXT NOT NULL,
       icon_url TEXT NOT NULL DEFAULT '',
       chat_url TEXT NOT NULL,
@@ -50,6 +52,14 @@ export function applySchema(db) {
   const hasDescription = markerColumns.some((column) => column.name === 'description');
   if (!hasDescription) {
     db.exec("ALTER TABLE markers ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
+  const hasShowTitle = markerColumns.some((column) => column.name === 'show_title');
+  if (!hasShowTitle) {
+    db.exec('ALTER TABLE markers ADD COLUMN show_title INTEGER NOT NULL DEFAULT 1');
+  }
+  const hasShowDescription = markerColumns.some((column) => column.name === 'show_description');
+  if (!hasShowDescription) {
+    db.exec('ALTER TABLE markers ADD COLUMN show_description INTEGER NOT NULL DEFAULT 1');
   }
   const hasIconUrl = markerColumns.some((column) => column.name === 'icon_url');
   if (!hasIconUrl) {

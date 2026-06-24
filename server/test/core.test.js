@@ -57,7 +57,9 @@ test('memory store upserts and deletes markers for edit token', () => {
     lat: 12.5,
     lng: 44.25,
     title: 'Library',
+    show_title: false,
     description: 'Quiet archive wing',
+    show_description: false,
     icon_style: 'background:#d7b56d',
     chat_url: 'https://chat.example/library'
   });
@@ -65,10 +67,46 @@ test('memory store upserts and deletes markers for edit token', () => {
   const fetched = store.getByToken(campaign.view_token);
   assert.equal(fetched.markers.length, 1);
   assert.equal(fetched.markers[0].title, 'Library');
+  assert.equal(fetched.markers[0].show_title, false);
   assert.equal(fetched.markers[0].description, 'Quiet archive wing');
+  assert.equal(fetched.markers[0].show_description, false);
 
   assert.equal(store.deleteMarker(campaign.edit_token, marker.id), true);
   assert.equal(store.getByToken(campaign.view_token).markers.length, 0);
+});
+
+test('memory store defaults marker title and description visibility to true', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Visibility Default' });
+
+  const marker = store.upsertMarker(campaign.edit_token, {
+    lat: 1,
+    lng: 2,
+    title: 'Visible'
+  });
+
+  assert.equal(marker.show_title, true);
+  assert.equal(marker.show_description, true);
+  assert.equal(store.getByToken(campaign.view_token).markers[0].show_title, true);
+  assert.equal(store.getByToken(campaign.view_token).markers[0].show_description, true);
+});
+
+test('memory store treats numeric zero as hidden marker title and description', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Numeric Visibility' });
+
+  const marker = store.upsertMarker(campaign.edit_token, {
+    lat: 1,
+    lng: 2,
+    title: 'Hidden',
+    show_title: 0,
+    show_description: 0
+  });
+
+  assert.equal(marker.show_title, false);
+  assert.equal(marker.show_description, false);
+  assert.equal(store.getByToken(campaign.view_token).markers[0].show_title, false);
+  assert.equal(store.getByToken(campaign.view_token).markers[0].show_description, false);
 });
 
 test('memory store saves campaign marker icons and marker icon_url', () => {
@@ -170,7 +208,9 @@ test('buildExportConfig strips edit token and keeps view data', () => {
     lat: 1,
     lng: 2,
     title: 'Gate',
+    show_title: false,
     description: 'North entrance',
+    show_description: false,
     icon_url: '/uploads/marker-icons/gate.webp'
   });
 
@@ -182,7 +222,9 @@ test('buildExportConfig strips edit token and keeps view data', () => {
   assert.equal(config.campaign.default_marker_icon_url, '/uploads/marker-icons/default.webp');
   assert.equal(config.campaign.default_marker_icon_style, 'width:28px;height:28px;background:#d7b56d;border:2px solid #3a2b1f;');
   assert.equal(config.markers[0].title, 'Gate');
+  assert.equal(config.markers[0].show_title, false);
   assert.equal(config.markers[0].description, 'North entrance');
+  assert.equal(config.markers[0].show_description, false);
   assert.equal(config.markers[0].icon_url, '/uploads/marker-icons/gate.webp');
 });
 

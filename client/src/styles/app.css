@@ -122,6 +122,23 @@ label,
   font-size: 13px;
 }
 
+.checkbox-field {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.visibility-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
 input,
 textarea {
   width: 100%;

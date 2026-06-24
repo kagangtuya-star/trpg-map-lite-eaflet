@@ -21,7 +21,9 @@ const form = reactive({
   lat: 0,
   lng: 0,
   title: '',
+  show_title: true,
   description: '',
+  show_description: true,
   icon_style: '',
   icon_url: '',
   chat_url: ''
@@ -101,7 +103,9 @@ watch(
       lat: Number(marker.lat ?? 0),
       lng: Number(marker.lng ?? 0),
       title: marker.title || '',
+      show_title: marker.show_title !== false && marker.show_title !== 0,
       description: marker.description || '',
+      show_description: marker.show_description !== false && marker.show_description !== 0,
       icon_style: iconStyle,
       icon_url: marker.icon_url || '',
       chat_url: marker.chat_url || ''
@@ -166,6 +170,17 @@ function clearMarkerIcon() {
       {{ t('marker.description') }}
       <textarea v-model="form.description" rows="3"></textarea>
     </label>
+
+    <div class="visibility-toggle-row">
+      <label class="checkbox-field">
+        <input v-model="form.show_title" type="checkbox" />
+        <span>{{ t('marker.showTitle') }}</span>
+      </label>
+      <label class="checkbox-field">
+        <input v-model="form.show_description" type="checkbox" />
+        <span>{{ t('marker.showDescription') }}</span>
+      </label>
+    </div>
 
     <label>
       {{ t('marker.chatUrl') }}

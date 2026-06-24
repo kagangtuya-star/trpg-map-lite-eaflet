@@ -7,10 +7,13 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function markerTooltipHtml(item) {
+function markerTooltipHtml(item, forceVisible = false) {
+  const showTitle = forceVisible || (item.show_title !== false && item.show_title !== 0);
+  const showDescription = forceVisible || (item.show_description !== false && item.show_description !== 0);
+  const titleHtml = showTitle && item.title ? `<b>${escapeHtml(item.title)}</b>` : '';
   const description = String(item.description || '').trim();
-  const descriptionHtml = description ? `<br><span>${escapeHtml(description)}</span>` : '';
-  return `<b>${escapeHtml(item.title)}</b>${descriptionHtml}`;
+  const descriptionHtml = showDescription && description ? `<span>${escapeHtml(description)}</span>` : '';
+  return [titleHtml, descriptionHtml].filter(Boolean).join('<br>');
 }
 
 function escapeAttribute(value) {
@@ -104,6 +107,9 @@ const TRANSPARENT_TILE =
   });
 
   config.markers.forEach((item) => {
+    const showTitle = item.show_title !== false && item.show_title !== 0;
+    const showDescription = item.show_description !== false && item.show_description !== 0;
+    const hasPersistentTooltip = (showTitle && Boolean(item.title)) || (showDescription && Boolean(String(item.description || '').trim()));
     const marker = L.marker([item.lat, item.lng], {
       icon: L.divIcon({
         className: 'magic-marker-shell',
@@ -114,10 +120,17 @@ const TRANSPARENT_TILE =
         iconAnchor: [12, 12]
       })
     }).addTo(map);
-    marker.bindTooltip(markerTooltipHtml(item), {
-      permanent: true,
+    marker.bindTooltip(markerTooltipHtml(item, false), {
+      permanent: hasPersistentTooltip,
       direction: 'right',
+      offset: L.point(28, 0),
       className: 'magic-tooltip'
+    });
+    marker.on('mouseover', () => {
+      marker.setTooltipContent(markerTooltipHtml(item, true));
+    });
+    marker.on('mouseout', () => {
+      marker.setTooltipContent(markerTooltipHtml(item, false));
     });
     marker.on('click', () => {
       if (item.chat_url) window.open(item.chat_url, '_blank');

@@ -24,6 +24,7 @@ let resizeObserver;
 let lastMarkerDragAt = 0;
 let mapDraggingPausedForMarker = false;
 let markerRecords = new Map();
+const tooltipOffset = L.point(28, 0);
 
 const cursorState = reactive({
   visible: false,
@@ -216,7 +217,9 @@ function markerStateSignature() {
         item.lat,
         item.lng,
         item.title,
+        item.show_title ?? true,
         item.description || '',
+        item.show_description ?? true,
         item.icon_url || '',
         item.icon_style || '',
         item.chat_url || ''
@@ -226,7 +229,15 @@ function markerStateSignature() {
 }
 
 function markerVisualSignature(item) {
-  return [item.title, item.description || '', item.icon_url || '', item.icon_style || '', item.chat_url || ''].join(':');
+  return [
+    item.title,
+    item.show_title ?? true,
+    item.description || '',
+    item.show_description ?? true,
+    item.icon_url || '',
+    item.icon_style || '',
+    item.chat_url || ''
+  ].join(':');
 }
 
 function buildMarkerIcon(item) {
@@ -242,6 +253,30 @@ function setMarkerDragging(marker, draggable) {
   if (!marker.dragging) return;
   if (draggable) marker.dragging.enable();
   else marker.dragging.disable();
+}
+
+function markerTooltipOptions(item) {
+  return {
+    permanent: hasPersistentTooltip(item),
+    direction: 'right',
+    offset: tooltipOffset,
+    className: 'magic-tooltip'
+  };
+}
+
+function hasPersistentTooltip(item) {
+  return (
+    (item.show_title !== false && item.show_title !== 0 && Boolean(item.title)) ||
+    (item.show_description !== false && item.show_description !== 0 && Boolean(String(item.description || '').trim()))
+  );
+}
+
+function showHoverTooltip(record) {
+  record.marker.setTooltipContent(markerTooltipHtml(record.item, true));
+}
+
+function hideHoverTooltip(record) {
+  record.marker.setTooltipContent(markerTooltipHtml(record.item, false));
 }
 
 function pauseMapDraggingForMarkerDrag() {
@@ -271,11 +306,9 @@ function createMarkerRecord(item) {
     icon: buildMarkerIcon(item)
   }).addTo(markerLayer);
   record.marker = marker;
-  marker.bindTooltip(markerTooltipHtml(item), {
-    permanent: true,
-    direction: 'right',
-    className: 'magic-tooltip'
-  });
+  marker.bindTooltip(markerTooltipHtml(item, false), markerTooltipOptions(item));
+  marker.on('mouseover', () => showHoverTooltip(record));
+  marker.on('mouseout', () => hideHoverTooltip(record));
   marker.on('click', (event) => {
     if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
     if (Date.now() - lastMarkerDragAt < 250) {
@@ -306,7 +339,8 @@ function syncMarkerRecord(record, item) {
   const nextVisualSignature = markerVisualSignature(item);
   if (nextVisualSignature !== record.visualSignature) {
     record.marker.setIcon(buildMarkerIcon(item));
-    record.marker.setTooltipContent(markerTooltipHtml(item));
+    record.marker.unbindTooltip();
+    record.marker.bindTooltip(markerTooltipHtml(item, false), markerTooltipOptions(item));
     record.visualSignature = nextVisualSignature;
   }
 

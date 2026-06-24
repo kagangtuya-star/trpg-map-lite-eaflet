@@ -46,11 +46,13 @@ export function buildGoogleTileTemplate(basePath, extension = 'png') {
   return `${basePath}/{z}/{y}/{x}.${extension}`;
 }
 
-export function markerTooltipHtml(marker) {
-  const title = escapeHtml(marker.title);
+export function markerTooltipHtml(marker, forceVisible = false) {
+  const showTitle = forceVisible || (marker.show_title !== false && marker.show_title !== 0);
+  const showDescription = forceVisible || (marker.show_description !== false && marker.show_description !== 0);
+  const titleHtml = showTitle && marker.title ? `<b>${escapeHtml(marker.title)}</b>` : '';
   const description = String(marker.description || '').trim();
-  const descriptionHtml = description ? `<br><span>${escapeHtml(description)}</span>` : '';
-  return `<b>${title}</b>${descriptionHtml}`;
+  const descriptionHtml = showDescription && description ? `<span>${escapeHtml(description)}</span>` : '';
+  return [titleHtml, descriptionHtml].filter(Boolean).join('<br>');
 }
 
 export function iconHtml(markerUrl, iconStyle) {

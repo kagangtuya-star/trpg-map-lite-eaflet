@@ -5,6 +5,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function isDescriptionVisible(value) {
+  return value !== false && value !== 0;
+}
+
 function normalizeCampaign(input = {}) {
   const tokens = createCampaignTokens();
   return {
@@ -29,7 +33,9 @@ function normalizeMarker(campaignId, input = {}, existing = {}) {
     lat: Number(input.lat ?? existing.lat ?? 0),
     lng: Number(input.lng ?? existing.lng ?? 0),
     title: input.title || existing.title || 'New Location',
+    show_title: isDescriptionVisible(input.show_title ?? existing.show_title ?? true),
     description: input.description ?? existing.description ?? '',
+    show_description: isDescriptionVisible(input.show_description ?? existing.show_description ?? true),
     icon_style: input.icon_style || existing.icon_style || DEFAULT_ICON_STYLE,
     icon_url: input.icon_url ?? existing.icon_url ?? '',
     chat_url: input.chat_url || existing.chat_url || '',

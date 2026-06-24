@@ -19,7 +19,9 @@ export function buildExportConfig(result, campaignPatch = {}) {
       lat: marker.lat,
       lng: marker.lng,
       title: marker.title,
+      show_title: marker.show_title !== false && marker.show_title !== 0,
       description: marker.description || '',
+      show_description: marker.show_description !== false && marker.show_description !== 0,
       icon_style: marker.icon_style,
       icon_url: marker.icon_url || '',
       chat_url: marker.chat_url

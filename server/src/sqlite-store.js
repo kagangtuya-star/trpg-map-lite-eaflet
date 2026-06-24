@@ -11,6 +11,20 @@ function notFound(message) {
   return error;
 }
 
+function isDescriptionVisible(value) {
+  return value !== false && value !== 0;
+}
+
+function normalizeMarkerRow(marker) {
+  return marker
+    ? {
+        ...marker,
+        show_title: isDescriptionVisible(marker.show_title),
+        show_description: isDescriptionVisible(marker.show_description)
+      }
+    : marker;
+}
+
 export function createSqliteStore(db) {
   const insertCampaign = db.prepare(`
     INSERT INTO campaigns (
@@ -41,9 +55,9 @@ export function createSqliteStore(db) {
   const selectMarkerById = db.prepare('SELECT * FROM markers WHERE id = ? AND campaign_id = ?');
   const insertMarker = db.prepare(`
     INSERT INTO markers (
-      id, campaign_id, lat, lng, title, description, icon_style, icon_url, chat_url, created_at, updated_at
+      id, campaign_id, lat, lng, title, show_title, description, show_description, icon_style, icon_url, chat_url, created_at, updated_at
     ) VALUES (
-      @id, @campaign_id, @lat, @lng, @title, @description, @icon_style, @icon_url, @chat_url, @created_at, @updated_at
+      @id, @campaign_id, @lat, @lng, @title, @show_title, @description, @show_description, @icon_style, @icon_url, @chat_url, @created_at, @updated_at
     )
   `);
   const updateMarker = db.prepare(`
@@ -51,7 +65,9 @@ export function createSqliteStore(db) {
     SET lat = @lat,
         lng = @lng,
         title = @title,
+        show_title = @show_title,
         description = @description,
+        show_description = @show_description,
         icon_style = @icon_style,
         icon_url = @icon_url,
         chat_url = @chat_url,
@@ -107,7 +123,7 @@ export function createSqliteStore(db) {
       return {
         mode: result.mode,
         campaign: result.campaign,
-        markers: selectMarkers.all(result.campaign.id),
+        markers: selectMarkers.all(result.campaign.id).map(normalizeMarkerRow),
         marker_icons: selectMarkerIcons.all(result.campaign.id)
       };
     },
@@ -137,15 +153,22 @@ export function createSqliteStore(db) {
         lat: Number(input.lat ?? existing?.lat ?? 0),
         lng: Number(input.lng ?? existing?.lng ?? 0),
         title: input.title || existing?.title || 'New Location',
+        show_title: isDescriptionVisible(input.show_title ?? existing?.show_title ?? true),
         description: input.description ?? existing?.description ?? '',
+        show_description: isDescriptionVisible(input.show_description ?? existing?.show_description ?? true),
         icon_style: input.icon_style || existing?.icon_style || DEFAULT_ICON_STYLE,
         icon_url: input.icon_url ?? existing?.icon_url ?? '',
         chat_url: input.chat_url || existing?.chat_url || '',
         created_at: existing?.created_at || timestamp,
         updated_at: timestamp
       };
-      if (existing) updateMarker.run(marker);
-      else insertMarker.run(marker);
+      const markerParams = {
+        ...marker,
+        show_title: marker.show_title ? 1 : 0,
+        show_description: marker.show_description ? 1 : 0
+      };
+      if (existing) updateMarker.run(markerParams);
+      else insertMarker.run(markerParams);
       return marker;
     },
 

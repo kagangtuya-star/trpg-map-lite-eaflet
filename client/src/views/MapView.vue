@@ -45,7 +45,9 @@ function createDraftMarker(event) {
     lat: Number(event.lat.toFixed(4)),
     lng: Number(event.lng.toFixed(4)),
     title: '',
+    show_title: true,
     description: '',
+    show_description: true,
     icon_style: campaign.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE,
     icon_url: campaign.default_marker_icon_url ?? '',
     chat_url: ''
@@ -58,13 +60,23 @@ function openDraftMarker(event) {
 }
 
 function openExistingMarker(event) {
-  activeMarker.value = { ...event.marker, description: event.marker.description || '' };
+  activeMarker.value = {
+    ...event.marker,
+    description: event.marker.description || '',
+    show_title: event.marker.show_title !== false && event.marker.show_title !== 0,
+    show_description: event.marker.show_description !== false && event.marker.show_description !== 0
+  };
   popoverPosition.value = event.point;
   activeTool.value = 'select';
 }
 
 function openPanelMarker(item) {
-  activeMarker.value = { ...item, description: item.description || '' };
+  activeMarker.value = {
+    ...item,
+    description: item.description || '',
+    show_title: item.show_title !== false && item.show_title !== 0,
+    show_description: item.show_description !== false && item.show_description !== 0
+  };
   popoverPosition.value = { x: 76, y: 96 };
   activeTool.value = 'select';
 }
@@ -137,7 +149,9 @@ async function saveMarkerDrag(event) {
     ...event.marker,
     lat: event.lat,
     lng: event.lng,
-    description: event.marker.description || ''
+    description: event.marker.description || '',
+    show_title: event.marker.show_title !== false && event.marker.show_title !== 0,
+    show_description: event.marker.show_description !== false && event.marker.show_description !== 0
   };
   try {
     const result = await apiClient.saveMarker(token.value, marker);
@@ -152,6 +166,8 @@ async function replaceMarkerIcon({ marker, iconUrl }) {
     const result = await apiClient.saveMarker(token.value, {
       ...marker,
       description: marker.description || '',
+      show_title: marker.show_title !== false && marker.show_title !== 0,
+      show_description: marker.show_description !== false && marker.show_description !== 0,
       icon_url: iconUrl
     });
     applySavedMarker(result.marker);
