@@ -451,9 +451,7 @@ button.ghost {
 }
 
 .default-marker-settings {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -478,11 +476,22 @@ button.ghost {
   padding: 5px;
 }
 
+.marker-icon-tile:hover .marker-icon-default-button,
+.marker-icon-default-button.active,
+.marker-icon-default-button:focus-visible {
+  opacity: 1;
+}
+
 .marker-icon-tile img,
-.marker-icon-choice img,
 .marker-row-icon {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+
+.marker-icon-choice img {
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -499,6 +508,28 @@ button.ghost {
   color: white;
   opacity: 0;
   padding: 0;
+}
+
+.marker-icon-default-button {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  z-index: 1;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgba(245, 158, 11, 0.44);
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.92);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.22);
+  opacity: 0;
+  padding: 0;
+}
+
+.marker-icon-default-button.active {
+  border-color: rgba(245, 158, 11, 0.78);
+  background: rgba(92, 56, 20, 0.92);
 }
 
 .marker-icon-tile:hover .marker-icon-delete,
@@ -602,10 +633,12 @@ button.ghost {
 }
 
 .marker-icon-choice {
+  position: relative;
   display: grid;
   aspect-ratio: 1;
   place-items: center;
   min-width: 38px;
+  min-height: 38px;
   padding: 5px;
 }
 
@@ -630,6 +663,20 @@ button.ghost {
   padding-right: 0;
   padding-left: 0;
   box-shadow: none;
+}
+
+.marker-preview {
+  position: relative;
+  display: grid;
+  min-height: 56px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.32);
+}
+
+.marker-size-value {
+  color: var(--muted-strong);
 }
 
 .state-panel {
@@ -788,6 +835,11 @@ button.ghost {
   border-radius: 0;
   object-fit: contain;
   box-shadow: none;
+}
+
+.marker-preview .marker-preview-icon {
+  position: static;
+  transform: none;
 }
 
 .magic-tooltip {

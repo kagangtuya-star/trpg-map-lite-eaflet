@@ -1,4 +1,4 @@
-import { DEFAULT_CURSOR_URL, DEFAULT_ICON_STYLE, DEFAULT_MAX_ZOOM, POINTER_CURSOR_URL } from './defaults.js';
+import { DEFAULT_CURSOR_URL, DEFAULT_ICON_STYLE, DEFAULT_MARKER_ICON_URL, DEFAULT_MAX_ZOOM, POINTER_CURSOR_URL } from './defaults.js';
 import { createCampaignTokens, createId } from './ids.js';
 
 function nowIso() {
@@ -14,9 +14,9 @@ function notFound(message) {
 export function createSqliteStore(db) {
   const insertCampaign = db.prepare(`
     INSERT INTO campaigns (
-      id, name, edit_token, view_token, default_cursor_url, pointer_cursor_url, max_zoom, created_at
+      id, name, edit_token, view_token, default_cursor_url, pointer_cursor_url, default_marker_icon_url, default_marker_icon_style, max_zoom, created_at
     ) VALUES (
-      @id, @name, @edit_token, @view_token, @default_cursor_url, @pointer_cursor_url, @max_zoom, @created_at
+      @id, @name, @edit_token, @view_token, @default_cursor_url, @pointer_cursor_url, @default_marker_icon_url, @default_marker_icon_style, @max_zoom, @created_at
     )
   `);
   const selectByToken = db.prepare(`
@@ -33,6 +33,8 @@ export function createSqliteStore(db) {
     SET name = @name,
         default_cursor_url = @default_cursor_url,
         pointer_cursor_url = @pointer_cursor_url,
+        default_marker_icon_url = @default_marker_icon_url,
+        default_marker_icon_style = @default_marker_icon_style,
         max_zoom = @max_zoom
     WHERE id = @id
   `);
@@ -90,6 +92,8 @@ export function createSqliteStore(db) {
         view_token: input.view_token || tokens.view_token,
         default_cursor_url: input.default_cursor_url || DEFAULT_CURSOR_URL,
         pointer_cursor_url: input.pointer_cursor_url || POINTER_CURSOR_URL,
+        default_marker_icon_url: input.default_marker_icon_url ?? DEFAULT_MARKER_ICON_URL,
+        default_marker_icon_style: input.default_marker_icon_style || DEFAULT_ICON_STYLE,
         max_zoom: Number(input.max_zoom ?? DEFAULT_MAX_ZOOM),
         created_at: input.created_at || nowIso()
       };
@@ -115,6 +119,8 @@ export function createSqliteStore(db) {
         name: patch.name ?? campaign.name,
         default_cursor_url: patch.default_cursor_url ?? campaign.default_cursor_url,
         pointer_cursor_url: patch.pointer_cursor_url ?? campaign.pointer_cursor_url,
+        default_marker_icon_url: patch.default_marker_icon_url ?? campaign.default_marker_icon_url,
+        default_marker_icon_style: patch.default_marker_icon_style || campaign.default_marker_icon_style,
         max_zoom: Number(patch.max_zoom ?? campaign.max_zoom)
       };
       updateCampaign.run(next);
@@ -165,6 +171,9 @@ export function createSqliteStore(db) {
       const campaign = requireEditCampaign(editToken);
       const icon = selectMarkerIconById.get(iconId, campaign.id);
       if (!icon) return false;
+      if (campaign.default_marker_icon_url === icon.url) {
+        throw new Error('Marker icon is in use');
+      }
       const usage = countMarkersUsingIcon.get(campaign.id, icon.url);
       if (Number(usage?.count || 0) > 0) {
         throw new Error('Marker icon is in use');

@@ -33,12 +33,22 @@ const styleControls = reactive({
 
 const isExisting = computed(() => Boolean(form.id));
 const usesStyleIcon = computed(() => !form.icon_url);
+const selectedMarkerPreviewUrl = computed(() => form.icon_url);
 const styleIconPreview = computed(() => ({
   width: `${styleControls.size}px`,
   height: `${styleControls.size}px`,
   background: styleControls.color,
   border: '2px solid #3a2b1f'
 }));
+const selectedMarkerPreviewStyle = computed(() => {
+  if (selectedMarkerPreviewUrl.value) {
+    return {
+      width: `${styleControls.size}px`,
+      height: `${styleControls.size}px`
+    };
+  }
+  return styleIconPreview.value;
+});
 const popoverStyle = computed(() => {
   const position = clampToViewport(props.position.x + popoverOffset, props.position.y + popoverOffset);
   return {
@@ -131,6 +141,7 @@ function save() {
 
 function selectMarkerIcon(icon) {
   form.icon_url = icon.url;
+  writeIconStyle();
 }
 
 function clearMarkerIcon() {
@@ -183,13 +194,26 @@ function clearMarkerIcon() {
       </button>
     </div>
 
-    <div v-if="usesStyleIcon" class="marker-style-controls">
-      <label>
+    <div class="marker-preview">
+      <img
+        v-if="selectedMarkerPreviewUrl"
+        class="custom-magic-marker custom-magic-marker--image marker-preview-icon"
+        :src="selectedMarkerPreviewUrl"
+        alt=""
+        :style="selectedMarkerPreviewStyle"
+        draggable="false"
+      />
+      <span v-else class="custom-magic-marker marker-preview-icon" :style="selectedMarkerPreviewStyle"></span>
+    </div>
+
+    <div class="marker-style-controls">
+      <label v-if="usesStyleIcon">
         {{ t('marker.styleColor') }}
         <input v-model="styleControls.color" type="color" />
       </label>
+      <span v-else></span>
       <label>
-        {{ t('marker.styleSize') }}
+        <span>{{ t('marker.styleSize') }} <span class="marker-size-value">{{ styleControls.size }}px</span></span>
         <input v-model.number="styleControls.size" type="range" min="12" max="48" />
       </label>
     </div>

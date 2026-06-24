@@ -1,3 +1,5 @@
+import { DEFAULT_ICON_STYLE } from './defaults.js';
+
 export function buildExportConfig(result, campaignPatch = {}) {
   return {
     mode: 'view',
@@ -7,6 +9,8 @@ export function buildExportConfig(result, campaignPatch = {}) {
       view_token: result.campaign.view_token,
       default_cursor_url: result.campaign.default_cursor_url,
       pointer_cursor_url: result.campaign.pointer_cursor_url,
+      default_marker_icon_url: result.campaign.default_marker_icon_url || '',
+      default_marker_icon_style: result.campaign.default_marker_icon_style || DEFAULT_ICON_STYLE,
       max_zoom: result.campaign.max_zoom,
       ...campaignPatch
     },

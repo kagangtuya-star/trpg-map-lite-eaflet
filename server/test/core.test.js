@@ -35,6 +35,20 @@ test('memory store resolves campaign mode from either token', () => {
   assert.equal(store.getByToken(campaign.view_token).mode, 'view');
 });
 
+test('memory store persists default marker icon settings on campaign config', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Default Marker Map' });
+
+  const updated = store.updateConfig(campaign.edit_token, {
+    default_marker_icon_url: '/uploads/marker-icons/default.webp',
+    default_marker_icon_style: 'width:36px;height:36px;background:#d7b56d;border:2px solid #3a2b1f;'
+  });
+
+  assert.equal(updated.default_marker_icon_url, '/uploads/marker-icons/default.webp');
+  assert.equal(updated.default_marker_icon_style, 'width:36px;height:36px;background:#d7b56d;border:2px solid #3a2b1f;');
+  assert.equal(store.getByToken(campaign.view_token).campaign.default_marker_icon_url, '/uploads/marker-icons/default.webp');
+});
+
 test('memory store upserts and deletes markers for edit token', () => {
   const store = createMemoryStore();
   const campaign = store.createCampaign({ name: 'Map', max_zoom: 3 });
@@ -112,6 +126,20 @@ test('memory store refuses to delete marker icons that are in use', () => {
   assert.throws(() => store.deleteMarkerIcon(campaign.edit_token, icon.id), /Marker icon is in use/);
 });
 
+test('memory store refuses to delete marker icons used as the campaign default', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Default Icon Guard' });
+  const icon = store.addMarkerIcon(campaign.edit_token, {
+    url: '/uploads/marker-icons/default.webp',
+    name: 'default.webp'
+  });
+  store.updateConfig(campaign.edit_token, {
+    default_marker_icon_url: icon.url
+  });
+
+  assert.throws(() => store.deleteMarkerIcon(campaign.edit_token, icon.id), /Marker icon is in use/);
+});
+
 test('memory store allows clearing marker icon_url back to style rendering', () => {
   const store = createMemoryStore();
   const campaign = store.createCampaign({ name: 'Icon Clear' });
@@ -134,6 +162,10 @@ test('memory store allows clearing marker icon_url back to style rendering', () 
 test('buildExportConfig strips edit token and keeps view data', () => {
   const store = createMemoryStore();
   const campaign = store.createCampaign({ name: 'Exported', max_zoom: 2 });
+  store.updateConfig(campaign.edit_token, {
+    default_marker_icon_url: '/uploads/marker-icons/default.webp',
+    default_marker_icon_style: 'width:28px;height:28px;background:#d7b56d;border:2px solid #3a2b1f;'
+  });
   store.upsertMarker(campaign.edit_token, {
     lat: 1,
     lng: 2,
@@ -147,6 +179,8 @@ test('buildExportConfig strips edit token and keeps view data', () => {
   assert.equal(config.mode, 'view');
   assert.equal(config.campaign.view_token, campaign.view_token);
   assert.equal(config.campaign.edit_token, undefined);
+  assert.equal(config.campaign.default_marker_icon_url, '/uploads/marker-icons/default.webp');
+  assert.equal(config.campaign.default_marker_icon_style, 'width:28px;height:28px;background:#d7b56d;border:2px solid #3a2b1f;');
   assert.equal(config.markers[0].title, 'Gate');
   assert.equal(config.markers[0].description, 'North entrance');
   assert.equal(config.markers[0].icon_url, '/uploads/marker-icons/gate.webp');

@@ -15,6 +15,8 @@ export function applySchema(db) {
       view_token TEXT UNIQUE NOT NULL,
       default_cursor_url TEXT NOT NULL,
       pointer_cursor_url TEXT NOT NULL,
+      default_marker_icon_url TEXT NOT NULL DEFAULT '',
+      default_marker_icon_style TEXT NOT NULL DEFAULT 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;',
       max_zoom INTEGER NOT NULL,
       created_at TEXT NOT NULL
     );
@@ -52,6 +54,16 @@ export function applySchema(db) {
   const hasIconUrl = markerColumns.some((column) => column.name === 'icon_url');
   if (!hasIconUrl) {
     db.exec("ALTER TABLE markers ADD COLUMN icon_url TEXT NOT NULL DEFAULT ''");
+  }
+
+  const campaignColumns = db.prepare('PRAGMA table_info(campaigns)').all();
+  const hasDefaultMarkerIconUrl = campaignColumns.some((column) => column.name === 'default_marker_icon_url');
+  if (!hasDefaultMarkerIconUrl) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN default_marker_icon_url TEXT NOT NULL DEFAULT ''");
+  }
+  const hasDefaultMarkerIconStyle = campaignColumns.some((column) => column.name === 'default_marker_icon_style');
+  if (!hasDefaultMarkerIconStyle) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN default_marker_icon_style TEXT NOT NULL DEFAULT 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;'");
   }
 }
 

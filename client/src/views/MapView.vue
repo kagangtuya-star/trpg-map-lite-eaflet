@@ -8,6 +8,8 @@ import MarkerPopover from '../components/MarkerPopover.vue';
 import { apiClient } from '../lib/api-client.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 
+const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;';
+
 const route = useRoute();
 const token = computed(() => String(route.params.token || ''));
 const loading = ref(true);
@@ -37,14 +39,15 @@ async function loadCampaign() {
 onMounted(loadCampaign);
 
 function createDraftMarker(event) {
+  const campaign = previewCampaign.value || payload.value?.campaign || {};
   return {
     id: '',
     lat: Number(event.lat.toFixed(4)),
     lng: Number(event.lng.toFixed(4)),
     title: '',
     description: '',
-    icon_style: 'background:#d7b56d;border:2px solid #3a2b1f;',
-    icon_url: '',
+    icon_style: campaign.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE,
+    icon_url: campaign.default_marker_icon_url ?? '',
     chat_url: ''
   };
 }

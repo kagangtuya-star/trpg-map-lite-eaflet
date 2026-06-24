@@ -55,9 +55,15 @@ export function markerTooltipHtml(marker) {
 
 export function iconHtml(markerUrl, iconStyle) {
   if (markerUrl) {
-    return `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(markerUrl)}" alt="" draggable="false" />`;
+    return `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(markerUrl)}" alt="" draggable="false" style="${escapeAttribute(markerSizeStyle(iconStyle))}" />`;
   }
   return `<div class="custom-magic-marker" style="${escapeAttribute(iconStyle)}"></div>`;
+}
+
+export function markerSizeStyle(iconStyle = '') {
+  const width = String(iconStyle).match(/width:\s*(\d+)px/)?.[1] || 32;
+  const height = String(iconStyle).match(/height:\s*(\d+)px/)?.[1] || width;
+  return `width:${width}px;height:${height}px;`;
 }
 
 export function buildCampaignFormData(input) {

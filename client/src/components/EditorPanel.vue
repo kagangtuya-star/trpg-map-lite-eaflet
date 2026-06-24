@@ -6,6 +6,8 @@ import { apiClient } from '../lib/api-client.js';
 import { prepareCursorUpload, prepareMarkerIconUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 
+const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;';
+
 const props = defineProps({
   campaign: { type: Object, required: true },
   markers: { type: Array, required: true },
@@ -28,6 +30,8 @@ const config = reactive({
   name: '',
   default_cursor_url: '',
   pointer_cursor_url: '',
+  default_marker_icon_url: '',
+  default_marker_icon_style: DEFAULT_MARKER_ICON_STYLE,
   max_zoom: 4
 });
 const uploadingCursor = ref('');
@@ -111,6 +115,30 @@ const ChevronIcon = defineComponent({
 const exportHref = computed(() => apiClient.exportUrl(props.token));
 const viewHref = computed(() => `/${props.campaign.view_token}`);
 const generatedMaxZoom = computed(() => props.campaign.tile_bounds?.max_zoom ?? props.campaign.max_zoom);
+const selectedDefaultMarkerIcon = computed(() =>
+  props.markerIcons.find((icon) => icon.url === config.default_marker_icon_url)
+);
+const defaultMarkerStylePreview = computed(() => {
+  const style = config.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE;
+  const width = style.match(/width:\s*(\d+)px/)?.[1] || 18;
+  const height = style.match(/height:\s*(\d+)px/)?.[1] || width;
+  const background = style.match(/background:\s*(#[0-9a-fA-F]{3,8})/)?.[1] || '#d7b56d';
+  return {
+    width: `${width}px`,
+    height: `${height}px`,
+    background,
+    border: '2px solid #3a2b1f'
+  };
+});
+const defaultMarkerImagePreview = computed(() => {
+  const style = config.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE;
+  const width = style.match(/width:\s*(\d+)px/)?.[1] || 32;
+  const height = style.match(/height:\s*(\d+)px/)?.[1] || width;
+  return {
+    width: `${width}px`,
+    height: `${height}px`
+  };
+});
 
 watch(
   () => props.campaign,
@@ -119,6 +147,8 @@ watch(
       name: campaign.name,
       default_cursor_url: campaign.default_cursor_url,
       pointer_cursor_url: campaign.pointer_cursor_url,
+      default_marker_icon_url: campaign.default_marker_icon_url || '',
+      default_marker_icon_style: campaign.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE,
       max_zoom: campaign.max_zoom
     });
   },
@@ -189,6 +219,16 @@ async function deleteMarkerIcon(icon) {
   } catch (cause) {
     markerIconError.value = cause.message;
   }
+}
+
+function selectDefaultMarkerIcon(icon) {
+  config.default_marker_icon_url = icon.url;
+  config.default_marker_icon_style = config.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE;
+}
+
+function clearDefaultMarkerIcon() {
+  config.default_marker_icon_url = '';
+  config.default_marker_icon_style = config.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE;
 }
 
 async function replaceMarkerIcon(event, marker) {
@@ -278,14 +318,35 @@ function toggleSection(section) {
         <div v-if="openSections.markers" class="accordion-content">
           <div class="default-marker-settings">
             <div class="field-block">{{ t('editor.defaultMarkerSettings') }}</div>
-            <div class="marker-icon-choice active">
-              <span class="custom-magic-marker" style="background:#d7b56d;border:2px solid #3a2b1f;"></span>
+            <div class="marker-icon-grid">
+              <button
+                type="button"
+                class="marker-icon-choice"
+                :class="{ active: !config.default_marker_icon_url }"
+                :title="t('marker.useStyleIcon')"
+                @click="clearDefaultMarkerIcon"
+              >
+                <span class="custom-magic-marker" :style="defaultMarkerStylePreview"></span>
+              </button>
+              <div v-if="selectedDefaultMarkerIcon" class="marker-icon-choice active" aria-current="true">
+                <img :src="selectedDefaultMarkerIcon.url" :alt="selectedDefaultMarkerIcon.name" :style="defaultMarkerImagePreview" />
+              </div>
             </div>
           </div>
           <div class="marker-icon-library">
             <div class="field-block">{{ t('editor.markerIcons') }}</div>
             <div class="marker-icon-grid">
               <div v-for="icon in markerIcons" :key="icon.id" class="marker-icon-tile">
+                <button
+                  type="button"
+                  class="marker-icon-default-button"
+                  :class="{ active: config.default_marker_icon_url === icon.url }"
+                  :title="t('editor.useAsDefaultMarker')"
+                  :aria-label="t('editor.useAsDefaultMarker')"
+                  @click="selectDefaultMarkerIcon(icon)"
+                >
+                  <span class="custom-magic-marker" :style="defaultMarkerStylePreview"></span>
+                </button>
                 <img :src="icon.url" :alt="icon.name" />
                 <button type="button" class="marker-icon-delete" :aria-label="t('editor.delete')" @click="deleteMarkerIcon(icon)">
                   <TrashIcon />
