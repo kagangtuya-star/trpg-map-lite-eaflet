@@ -63,9 +63,22 @@ export function iconHtml(markerUrl, iconStyle) {
 }
 
 export function markerSizeStyle(iconStyle = '') {
-  const width = String(iconStyle).match(/width:\s*(\d+)px/)?.[1] || 32;
-  const height = String(iconStyle).match(/height:\s*(\d+)px/)?.[1] || width;
+  const { width, height } = markerArtSize(iconStyle);
   return `width:${width}px;height:${height}px;`;
+}
+
+export function markerInteractionSize(iconStyle = '', minimumSize = 40) {
+  const { width, height } = markerArtSize(iconStyle);
+  return {
+    width: Math.max(minimumSize, width),
+    height: Math.max(minimumSize, height)
+  };
+}
+
+function markerArtSize(iconStyle = '') {
+  const width = Number(String(iconStyle).match(/width:\s*(\d+)px/)?.[1] || 32);
+  const height = Number(String(iconStyle).match(/height:\s*(\d+)px/)?.[1] || width);
+  return { width, height };
 }
 
 export function buildCampaignFormData(input) {

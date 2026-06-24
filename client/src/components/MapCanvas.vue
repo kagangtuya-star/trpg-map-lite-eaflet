@@ -2,7 +2,14 @@
 import { nextTick, onBeforeUnmount, reactive, watch } from 'vue';
 import L from 'leaflet';
 
-import { applyDynamicCursors, buildGoogleTileTemplate, formatLatLng, iconHtml, markerTooltipHtml } from '../lib/map-utils.js';
+import {
+  applyDynamicCursors,
+  buildGoogleTileTemplate,
+  formatLatLng,
+  iconHtml,
+  markerInteractionSize,
+  markerTooltipHtml
+} from '../lib/map-utils.js';
 
 const TRANSPARENT_TILE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAEklEQVR42mNk+M9QzwAEjDAGACvBAf9iQkZAAAAAAElFTkSuQmCC';
@@ -21,10 +28,10 @@ let markerLayer;
 let coordControl;
 let mapContainer;
 let resizeObserver;
-let lastMarkerDragAt = 0;
 let mapDraggingPausedForMarker = false;
 let markerRecords = new Map();
 const tooltipOffset = L.point(28, 0);
+const markerClickMoveTolerance = 4;
 
 const cursorState = reactive({
   visible: false,
@@ -241,11 +248,12 @@ function markerVisualSignature(item) {
 }
 
 function buildMarkerIcon(item) {
+  const interactionSize = markerInteractionSize(item.icon_style);
   return L.divIcon({
     className: 'magic-marker-shell',
     html: `<span class="magic-marker-hit-area" aria-hidden="true"></span>${iconHtml(item.icon_url, item.icon_style)}`,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
+    iconSize: [interactionSize.width, interactionSize.height],
+    iconAnchor: [interactionSize.width / 2, interactionSize.height / 2]
   });
 }
 
@@ -292,13 +300,39 @@ function restoreMapDraggingAfterMarkerDrag() {
   mapDraggingPausedForMarker = false;
 }
 
+function gesturePoint(event) {
+  const originalEvent = event?.originalEvent;
+  const touch = originalEvent?.changedTouches?.[0] || originalEvent?.touches?.[0];
+  const clientX = touch?.clientX ?? originalEvent?.clientX;
+  const clientY = touch?.clientY ?? originalEvent?.clientY;
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
+  return { x: clientX, y: clientY };
+}
+
+function trackMarkerPointerDown(record, event) {
+  record.clickStartPoint = gesturePoint(event);
+  record.draggedDuringGesture = false;
+}
+
+function shouldOpenMarkerFromClick(record, event) {
+  if (record.dragging || record.draggedDuringGesture) return false;
+  const start = record.clickStartPoint;
+  record.clickStartPoint = null;
+  if (!start) return true;
+  const end = gesturePoint(event);
+  if (!end) return true;
+  return Math.hypot(end.x - start.x, end.y - start.y) <= markerClickMoveTolerance;
+}
+
 function createMarkerRecord(item) {
   const record = {
     marker: undefined,
     item,
     visualSignature: markerVisualSignature(item),
     draggable: canDragMarkers(),
-    dragging: false
+    dragging: false,
+    clickStartPoint: null,
+    draggedDuringGesture: false
   };
   const marker = L.marker([item.lat, item.lng], {
     draggable: record.draggable,
@@ -309,9 +343,11 @@ function createMarkerRecord(item) {
   marker.bindTooltip(markerTooltipHtml(item, false), markerTooltipOptions(item));
   marker.on('mouseover', () => showHoverTooltip(record));
   marker.on('mouseout', () => hideHoverTooltip(record));
+  marker.on('mousedown', (event) => trackMarkerPointerDown(record, event));
+  marker.on('touchstart', (event) => trackMarkerPointerDown(record, event));
   marker.on('click', (event) => {
     if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
-    if (Date.now() - lastMarkerDragAt < 250) {
+    if (!shouldOpenMarkerFromClick(record, event)) {
       return;
     }
     if (props.mode === 'edit') {
@@ -322,13 +358,13 @@ function createMarkerRecord(item) {
   });
   marker.on('dragstart', () => {
     record.dragging = true;
+    record.draggedDuringGesture = true;
     pauseMapDraggingForMarkerDrag();
     emit('marker-drag-start', { marker: record.item });
   });
   marker.on('dragend', () => {
     record.dragging = false;
     restoreMapDraggingAfterMarkerDrag();
-    lastMarkerDragAt = Date.now();
     emitMarkerDragEnd(record.item, marker.getLatLng());
   });
   return record;
