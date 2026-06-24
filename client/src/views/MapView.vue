@@ -74,10 +74,34 @@ function updateConfigPreview(config) {
   configPreview.value = config;
 }
 
+function applySavedCampaign(campaign) {
+  if (!payload.value) return;
+  payload.value = {
+    ...payload.value,
+    campaign: {
+      ...payload.value.campaign,
+      ...campaign
+    }
+  };
+  configPreview.value = null;
+}
+
+function applySavedMarker(marker) {
+  if (!payload.value) return;
+  const markers = payload.value.markers || [];
+  const index = markers.findIndex((item) => item.id === marker.id);
+  const nextMarkers =
+    index >= 0 ? markers.map((item) => (item.id === marker.id ? marker : item)) : [...markers, marker];
+  payload.value = {
+    ...payload.value,
+    markers: nextMarkers
+  };
+}
+
 async function saveMarker(marker) {
-  await apiClient.saveMarker(token.value, marker);
+  const result = await apiClient.saveMarker(token.value, marker);
+  applySavedMarker(result.marker);
   closeMarkerPopover();
-  await loadCampaign();
 }
 
 async function saveMarkerDrag(event) {
@@ -88,11 +112,10 @@ async function saveMarkerDrag(event) {
     description: event.marker.description || ''
   };
   try {
-    await apiClient.saveMarker(token.value, marker);
-    await loadCampaign();
+    const result = await apiClient.saveMarker(token.value, marker);
+    applySavedMarker(result.marker);
   } catch (cause) {
     error.value = cause.message;
-    await loadCampaign();
   }
 }
 
@@ -114,6 +137,7 @@ async function deleteMarker(id) {
         :markers="payload.markers"
         :token="token"
         @refresh="loadCampaign"
+        @config-saved="applySavedCampaign"
         @edit-marker="openPanelMarker"
         @config-preview="updateConfigPreview"
       />

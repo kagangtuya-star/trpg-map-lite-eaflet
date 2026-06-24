@@ -11,7 +11,7 @@ const props = defineProps({
   token: { type: String, required: true }
 });
 
-const emit = defineEmits(['refresh', 'edit-marker', 'config-preview']);
+const emit = defineEmits(['refresh', 'edit-marker', 'config-preview', 'config-saved']);
 
 const config = reactive({
   name: '',
@@ -120,8 +120,8 @@ watch(
 );
 
 async function saveConfig() {
-  await apiClient.updateConfig(props.token, config);
-  emit('refresh');
+  const result = await apiClient.updateConfig(props.token, config);
+  emit('config-saved', result.campaign);
 }
 
 async function uploadCursor(event, target) {
