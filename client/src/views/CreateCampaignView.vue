@@ -9,8 +9,8 @@ import { buildCampaignFormData } from '../lib/map-utils.js';
 
 const file = ref(null);
 const name = ref('Arcane Academy');
-const defaultCursorUrl = ref('/cursors/default-wand.png');
-const pointerCursorUrl = ref('/cursors/pointer-hand.png');
+const defaultCursorUrl = ref('/cursors/default-wand.svg');
+const pointerCursorUrl = ref('/cursors/pointer-hand.svg');
 const maxZoom = ref(4);
 const loading = ref(false);
 const uploadingCursor = ref('');
