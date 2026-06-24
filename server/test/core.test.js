@@ -7,6 +7,7 @@ import path from 'node:path';
 import { createCampaignTokens, createId } from '../src/ids.js';
 import { createMemoryStore } from '../src/memory-store.js';
 import { buildExportConfig } from '../src/export-config.js';
+import { normalizeArchiveConfig, replaceDirectoryContents, validateArchiveEntryName } from '../src/import-service.js';
 import { ensureDatabaseDirectory } from '../src/db.js';
 import { TILE_EXTENSION, generateTiles, getGeneratedMaxZoom, getGeneratedTileBounds } from '../src/tile-service.js';
 
@@ -204,6 +205,10 @@ test('buildExportConfig strips edit token and keeps view data', () => {
     default_marker_icon_url: '/uploads/marker-icons/default.webp',
     default_marker_icon_style: 'width:28px;height:28px;background:#d7b56d;border:2px solid #3a2b1f;'
   });
+  const icon = store.addMarkerIcon(campaign.edit_token, {
+    url: '/uploads/marker-icons/gate.webp',
+    name: 'gate.webp'
+  });
   store.upsertMarker(campaign.edit_token, {
     lat: 1,
     lng: 2,
@@ -226,6 +231,107 @@ test('buildExportConfig strips edit token and keeps view data', () => {
   assert.equal(config.markers[0].description, 'North entrance');
   assert.equal(config.markers[0].show_description, false);
   assert.equal(config.markers[0].icon_url, '/uploads/marker-icons/gate.webp');
+  assert.equal(config.marker_icons.length, 1);
+  assert.equal(config.marker_icons[0].id, icon.id);
+  assert.equal(config.marker_icons[0].campaign_id, campaign.id);
+  assert.equal(config.marker_icons[0].url, '/uploads/marker-icons/gate.webp');
+  assert.equal(config.marker_icons[0].name, 'gate.webp');
+});
+
+test('memory store replaces archive data while preserving current campaign identity', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Current', max_zoom: 2 });
+  const oldMarker = store.upsertMarker(campaign.edit_token, { title: 'Old', lat: 1, lng: 1 });
+
+  const replaced = store.replaceCampaignArchive(campaign.edit_token, {
+    campaign: {
+      id: 'imported-id',
+      name: 'Imported',
+      view_token: 'view_imported',
+      default_cursor_url: '/uploads/cursors/imported.webp',
+      pointer_cursor_url: '/uploads/cursors/pointer.webp',
+      default_marker_icon_url: '/uploads/marker-icons/default.webp',
+      default_marker_icon_style: 'width:20px;height:20px;background:#f59e0b;border:2px solid #111;',
+      max_zoom: 5
+    },
+    markers: [
+      {
+        id: 'marker-imported',
+        campaign_id: 'imported-id',
+        lat: 3,
+        lng: 4,
+        title: 'Imported Gate',
+        show_title: false,
+        description: 'New marker',
+        show_description: true,
+        icon_style: 'background:#fff',
+        icon_url: '/uploads/marker-icons/default.webp',
+        chat_url: ''
+      }
+    ],
+    marker_icons: [
+      {
+        id: 'icon-imported',
+        campaign_id: 'imported-id',
+        url: '/uploads/marker-icons/default.webp',
+        name: 'default.webp',
+        created_at: '2026-06-24T00:00:00.000Z'
+      }
+    ]
+  });
+
+  assert.equal(replaced.campaign.id, campaign.id);
+  assert.equal(replaced.campaign.edit_token, campaign.edit_token);
+  assert.equal(replaced.campaign.view_token, campaign.view_token);
+  assert.equal(replaced.campaign.name, 'Imported');
+  assert.equal(replaced.markers.length, 1);
+  assert.equal(replaced.markers[0].id, 'marker-imported');
+  assert.equal(replaced.markers[0].campaign_id, campaign.id);
+  assert.notEqual(replaced.markers[0].id, oldMarker.id);
+  assert.equal(replaced.marker_icons[0].id, 'icon-imported');
+  assert.equal(replaced.marker_icons[0].campaign_id, campaign.id);
+});
+
+test('validateArchiveEntryName rejects unsafe zip paths', () => {
+  assert.equal(validateArchiveEntryName('config.json'), true);
+  assert.equal(validateArchiveEntryName('tiles/0/0/0.png'), true);
+  assert.equal(validateArchiveEntryName('../config.json'), false);
+  assert.equal(validateArchiveEntryName('/config.json'), false);
+  assert.equal(validateArchiveEntryName('tiles\\0\\0.png'), false);
+});
+
+test('normalizeArchiveConfig preserves imported item ids but rewrites campaign identity', () => {
+  const normalized = normalizeArchiveConfig(
+    {
+      campaign: { id: 'source', name: 'Imported', view_token: 'view_source', max_zoom: 4 },
+      markers: [{ id: 'm1', campaign_id: 'source', lat: 1, lng: 2, title: 'Gate' }],
+      marker_icons: [{ id: 'i1', campaign_id: 'source', url: '/uploads/marker-icons/i.webp', name: 'i.webp' }]
+    },
+    { id: 'current', edit_token: 'edit_current', view_token: 'view_current' }
+  );
+
+  assert.equal(normalized.campaign.id, 'current');
+  assert.equal(normalized.campaign.edit_token, 'edit_current');
+  assert.equal(normalized.campaign.view_token, 'view_current');
+  assert.equal(normalized.markers[0].id, 'm1');
+  assert.equal(normalized.markers[0].campaign_id, 'current');
+  assert.equal(normalized.marker_icons[0].id, 'i1');
+  assert.equal(normalized.marker_icons[0].campaign_id, 'current');
+});
+
+test('replaceDirectoryContents overwrites tile contents without renaming the target directory', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'trpg-map-replace-'));
+  const source = path.join(root, 'source');
+  const target = path.join(root, 'target');
+  await fs.mkdir(path.join(source, '0', '0'), { recursive: true });
+  await fs.mkdir(path.join(target, 'old'), { recursive: true });
+  await fs.writeFile(path.join(source, '0', '0', '0.png'), 'new');
+  await fs.writeFile(path.join(target, 'old', 'tile.png'), 'old');
+
+  await replaceDirectoryContents(source, target);
+
+  assert.equal(await fs.readFile(path.join(target, '0', '0', '0.png'), 'utf8'), 'new');
+  await assert.rejects(fs.access(path.join(target, 'old', 'tile.png')));
 });
 
 test('ensureDatabaseDirectory creates missing parent directory', async () => {

@@ -7,6 +7,7 @@ import {
   buildGoogleTileTemplate,
   formatLatLng,
   iconHtml,
+  markerInteractionSize,
   markerTooltipHtml
 } from '../src/lib/map-utils.js';
 
@@ -52,9 +53,48 @@ describe('map utilities', () => {
     ).toBe('<b>&lt;Tower&gt;</b><br><span>Secret &lt;script&gt;wing&lt;/script&gt;</span>');
   });
 
-  it('renders marker URL as marker icon image', () => {
-    expect(iconHtml('/uploads/cursors/hand.png', 'background:red')).toBe(
-      '<img class="custom-magic-marker custom-magic-marker--image" src="/uploads/cursors/hand.png" alt="" />'
+  it('renders marker tooltip html from independent title and description visibility flags', () => {
+    expect(
+      markerTooltipHtml({
+        title: 'Tower',
+        description: 'Secret wing',
+        show_title: false,
+        show_description: true
+      })
+    ).toBe('<span>Secret wing</span>');
+    expect(
+      markerTooltipHtml({
+        title: 'Tower',
+        description: 'Secret wing',
+        show_title: true,
+        show_description: false
+      })
+    ).toBe('<b>Tower</b>');
+    expect(
+      markerTooltipHtml({
+        title: 'Tower',
+        description: 'Secret wing',
+        show_title: false,
+        show_description: false
+      })
+    ).toBe('');
+  });
+
+  it('renders marker URL as a sized marker icon image', () => {
+    expect(iconHtml('/uploads/marker-icons/gate.webp', 'width:36px;height:36px;background:red')).toBe(
+      '<img class="custom-magic-marker custom-magic-marker--image" src="/uploads/marker-icons/gate.webp" alt="" draggable="false" style="width:36px;height:36px;" />'
+    );
+  });
+
+  it('uses visible marker art size to derive a minimum hit target', () => {
+    expect(markerInteractionSize('width:48px;height:24px;')).toEqual({ width: 48, height: 40 });
+    expect(markerInteractionSize('width:18px;height:18px;')).toEqual({ width: 40, height: 40 });
+    expect(markerInteractionSize('')).toEqual({ width: 40, height: 40 });
+  });
+
+  it('falls back to marker style when marker URL is empty', () => {
+    expect(iconHtml('', 'background:#d7b56d')).toBe(
+      '<div class="custom-magic-marker" style="background:#d7b56d"></div>'
     );
   });
 
@@ -70,6 +110,8 @@ describe('map utilities', () => {
 
     expect(formData.get('map')).toBe(file);
     expect(formData.get('name')).toBe('Academy');
+    expect(formData.get('default_cursor_url')).toBe('/wand.png');
+    expect(formData.get('pointer_cursor_url')).toBe('/hand.png');
     expect(formData.get('max_zoom')).toBe('5');
   });
 });
