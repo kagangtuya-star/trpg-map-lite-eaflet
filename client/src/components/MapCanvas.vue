@@ -22,6 +22,7 @@ let coordControl;
 let mapContainer;
 let resizeObserver;
 let lastMarkerDragAt = 0;
+let mapDraggingPausedForMarker = false;
 let markerRecords = new Map();
 
 const cursorState = reactive({
@@ -156,6 +157,10 @@ function hideCustomCursor() {
 }
 
 function updateCustomCursor(event) {
+  if (mapDraggingPausedForMarker) {
+    hideCustomCursor();
+    return;
+  }
   if (props.mode === 'edit' && props.activeTool === 'marker') {
     hideCustomCursor();
     return;
@@ -227,9 +232,9 @@ function markerVisualSignature(item) {
 function buildMarkerIcon(item) {
   return L.divIcon({
     className: 'magic-marker-shell',
-    html: iconHtml(item.icon_url, item.icon_style),
-    iconSize: [32, 32],
-    iconAnchor: [12, 12]
+    html: `<span class="magic-marker-hit-area" aria-hidden="true"></span>${iconHtml(item.icon_url, item.icon_style)}`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
   });
 }
 
@@ -237,6 +242,19 @@ function setMarkerDragging(marker, draggable) {
   if (!marker.dragging) return;
   if (draggable) marker.dragging.enable();
   else marker.dragging.disable();
+}
+
+function pauseMapDraggingForMarkerDrag() {
+  hideCustomCursor();
+  if (!map?.dragging?.enabled?.()) return;
+  map.dragging.disable();
+  mapDraggingPausedForMarker = true;
+}
+
+function restoreMapDraggingAfterMarkerDrag() {
+  if (!mapDraggingPausedForMarker) return;
+  map.dragging.enable();
+  mapDraggingPausedForMarker = false;
 }
 
 function createMarkerRecord(item) {
@@ -271,10 +289,12 @@ function createMarkerRecord(item) {
   });
   marker.on('dragstart', () => {
     record.dragging = true;
+    pauseMapDraggingForMarkerDrag();
     emit('marker-drag-start', { marker: record.item });
   });
   marker.on('dragend', () => {
     record.dragging = false;
+    restoreMapDraggingAfterMarkerDrag();
     lastMarkerDragAt = Date.now();
     emitMarkerDragEnd(record.item, marker.getLatLng());
   });

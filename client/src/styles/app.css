@@ -754,11 +754,27 @@ button.ghost {
   height: 20px;
 }
 
+.magic-marker-shell {
+  position: relative;
+  display: block;
+}
+
 .custom-magic-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 18px;
   height: 18px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22), 0 0 18px rgba(245, 158, 11, 0.84);
+  transform: translate(-50%, -50%);
+}
+
+.magic-marker-hit-area {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: auto;
 }
 
 .magic-marker-shell .custom-magic-marker {
