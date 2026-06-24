@@ -217,6 +217,16 @@ onBeforeUnmount(revokeMapPreview);
         <input ref="mapInput" class="sr-only-file" type="file" accept="image/*" tabindex="-1" @change="onFileChange" />
       </div>
       <label class="field-block">
+        {{ t('create.defaultCursorUrl') }}
+        <span class="asset-picker-row">
+          <img v-if="defaultCursorUrl" class="asset-preview asset-preview--cursor" :src="defaultCursorUrl" alt="" />
+          <span class="upload-button icon-upload-button" :title="t('create.uploadCursor')">
+            <UploadCloudIcon />
+            <input type="file" accept="image/*,.cur,.ico,.svg" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'default')" />
+          </span>
+        </span>
+      </label>
+      <label class="field-block">
         {{ t('create.pointerCursorUrl') }}
         <span class="asset-picker-row">
           <img v-if="pointerCursorUrl" class="asset-preview asset-preview--cursor" :src="pointerCursorUrl" alt="" />

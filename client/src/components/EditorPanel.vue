@@ -297,6 +297,16 @@ async function importArchiveFile(event) {
         </button>
         <div v-if="openSections.cursors" class="accordion-content">
           <label>
+            {{ t('editor.defaultCursorUrl') }}
+            <span class="asset-picker-row">
+              <img v-if="config.default_cursor_url" class="asset-preview asset-preview--cursor" :src="config.default_cursor_url" alt="" />
+              <span class="upload-button icon-upload-button" :title="t('editor.uploadCursor')">
+                <UploadCloudIcon />
+                <input type="file" accept="image/*,.cur,.ico,.svg" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'default')" />
+              </span>
+            </span>
+          </label>
+          <label>
             {{ t('editor.pointerCursorUrl') }}
             <span class="asset-picker-row">
               <img v-if="config.pointer_cursor_url" class="asset-preview asset-preview--cursor" :src="config.pointer_cursor_url" alt="" />

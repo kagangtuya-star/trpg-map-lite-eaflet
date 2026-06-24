@@ -165,6 +165,10 @@ function isPointerTarget(target) {
   return Boolean(target?.closest?.('.leaflet-marker-icon, .leaflet-interactive, .magic-marker-shell'));
 }
 
+function cursorUrlForKind(kind) {
+  return kind === 'pointer' ? props.campaign.pointer_cursor_url : props.campaign.default_cursor_url;
+}
+
 function hideCustomCursor() {
   cursorState.visible = false;
 }
@@ -184,7 +188,7 @@ function updateCustomCursor(event) {
   cursorState.x = event.clientX - rect.left;
   cursorState.y = event.clientY - rect.top;
   cursorState.kind = kind;
-  cursorState.url = props.campaign.pointer_cursor_url;
+  cursorState.url = cursorUrlForKind(kind);
 }
 
 function emitMarkerClick(item) {
@@ -438,7 +442,7 @@ watch(
     applyDynamicCursors(props.campaign);
     updatePlacementCursor();
     if (cursorState.visible) {
-      cursorState.url = props.campaign.pointer_cursor_url;
+      cursorState.url = cursorUrlForKind(cursorState.kind);
     }
     syncMarkers();
   },
