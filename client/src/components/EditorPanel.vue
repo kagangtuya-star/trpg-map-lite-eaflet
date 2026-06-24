@@ -19,7 +19,8 @@ const emit = defineEmits([
   'config-preview',
   'config-saved',
   'marker-icon-created',
-  'marker-icon-deleted'
+  'marker-icon-deleted',
+  'archive-imported'
 ]);
 
 const config = reactive({
@@ -34,6 +35,9 @@ const uploadingCursor = ref('');
 const uploadingMarkerIcons = ref(false);
 const uploadError = ref('');
 const markerIconError = ref('');
+const archiveFileInput = ref(null);
+const importingArchive = ref(false);
+const archiveError = ref('');
 const openSections = reactive({
   campaign: true,
   cursors: true,
@@ -229,6 +233,30 @@ function clearDefaultMarkerIcon() {
 function toggleSection(section) {
   openSections[section] = !openSections[section];
 }
+
+function openArchiveImport() {
+  archiveFileInput.value?.click();
+}
+
+async function importArchiveFile(event) {
+  const selectedFile = event.target.files?.[0];
+  if (!selectedFile) return;
+  if (!window.confirm(t('editor.importZipConfirm'))) {
+    event.target.value = '';
+    return;
+  }
+  importingArchive.value = true;
+  archiveError.value = '';
+  try {
+    const result = await apiClient.importArchive(props.token, selectedFile);
+    emit('archive-imported', result);
+  } catch (cause) {
+    archiveError.value = cause.message;
+  } finally {
+    importingArchive.value = false;
+    event.target.value = '';
+  }
+}
 </script>
 
 <template>
@@ -335,9 +363,24 @@ function toggleSection(section) {
       </section>
     </div>
 
-    <RouterLink class="export-link" :to="viewHref" target="_blank" rel="noopener noreferrer">
-      {{ t('editor.openViewMap') }}
-    </RouterLink>
-    <a class="export-link" :href="exportHref">{{ t('editor.exportZip') }}</a>
+    <div class="archive-control-wrap">
+      <p v-if="archiveError" class="inline-error">{{ archiveError }}</p>
+      <div class="archive-control-bar">
+        <RouterLink class="archive-control-button" :to="viewHref" target="_blank" rel="noopener noreferrer">
+          {{ t('editor.openViewMap') }}
+        </RouterLink>
+        <a class="archive-control-button" :href="exportHref">{{ t('editor.exportZip') }}</a>
+        <button type="button" class="archive-control-button" :disabled="importingArchive" @click="openArchiveImport">
+          {{ importingArchive ? t('editor.importingZip') : t('editor.importZip') }}
+        </button>
+        <input
+          ref="archiveFileInput"
+          class="archive-file-input"
+          type="file"
+          accept=".zip,application/zip"
+          @change="importArchiveFile"
+        />
+      </div>
+    </div>
   </aside>
 </template>

@@ -25,6 +25,7 @@ const savingMarker = ref(false);
 const selectedMarkerId = ref('');
 const mapCanvasRef = ref(null);
 const isConsoleCollapsed = ref(false);
+const mapReloadKey = ref(0);
 const previewCampaign = computed(() =>
   payload.value?.campaign ? { ...payload.value.campaign, ...(configPreview.value || {}) } : null
 );
@@ -228,6 +229,18 @@ async function deleteMarker(id) {
   closeMarkerPopover();
   removeSavedMarker(id);
 }
+
+async function handleArchiveImported(result) {
+  payload.value = result;
+  configPreview.value = null;
+  activeMarker.value = null;
+  popoverPosition.value = null;
+  selectedMarkerId.value = '';
+  mapReloadKey.value += 1;
+  await nextTick();
+  mapCanvasRef.value?.refreshSize?.();
+  await loadCampaign();
+}
 </script>
 
 <template>
@@ -246,6 +259,7 @@ async function deleteMarker(id) {
         @config-preview="updateConfigPreview"
         @marker-icon-created="applySavedMarkerIcon"
         @marker-icon-deleted="removeSavedMarkerIcon"
+        @archive-imported="handleArchiveImported"
       />
       <section class="map-workspace">
         <div v-if="payload.mode === 'edit'" class="map-control-stack">
@@ -296,6 +310,7 @@ async function deleteMarker(id) {
           {{ localeLabel }} / {{ localeToggleLabel }}
         </button>
         <MapCanvas
+          :key="mapReloadKey"
           ref="mapCanvasRef"
           :campaign="previewCampaign"
           :markers="payload.markers"

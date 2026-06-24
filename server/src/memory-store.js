@@ -67,6 +67,17 @@ export function createMemoryStore() {
     return result.campaign;
   }
 
+  function getByToken(token) {
+    const result = findCampaignByToken(token);
+    if (!result) return null;
+    return {
+      mode: result.mode,
+      campaign: result.campaign,
+      markers: [...(markers.get(result.campaign.id) || [])],
+      marker_icons: [...(markerIcons.get(result.campaign.id) || [])]
+    };
+  }
+
   return {
     createCampaign(input = {}) {
       const campaign = normalizeCampaign(input);
@@ -76,16 +87,7 @@ export function createMemoryStore() {
       return campaign;
     },
 
-    getByToken(token) {
-      const result = findCampaignByToken(token);
-      if (!result) return null;
-      return {
-        mode: result.mode,
-        campaign: result.campaign,
-        markers: [...(markers.get(result.campaign.id) || [])],
-        marker_icons: [...(markerIcons.get(result.campaign.id) || [])]
-      };
-    },
+    getByToken,
 
     updateConfig(editToken, patch = {}) {
       const campaign = requireEditCampaign(editToken);
@@ -153,6 +155,35 @@ export function createMemoryStore() {
         icons.filter((item) => item.id !== iconId)
       );
       return true;
+    },
+
+    replaceCampaignArchive(editToken, archiveData = {}) {
+      const campaign = requireEditCampaign(editToken);
+      const next = {
+        ...campaign,
+        default_cursor_url: archiveData.campaign?.default_cursor_url ?? campaign.default_cursor_url,
+        pointer_cursor_url: archiveData.campaign?.pointer_cursor_url ?? campaign.pointer_cursor_url,
+        default_marker_icon_url: archiveData.campaign?.default_marker_icon_url ?? campaign.default_marker_icon_url,
+        default_marker_icon_style: archiveData.campaign?.default_marker_icon_style || campaign.default_marker_icon_style,
+        name: archiveData.campaign?.name ?? campaign.name,
+        max_zoom: Number(archiveData.campaign?.max_zoom ?? campaign.max_zoom)
+      };
+      campaigns.set(campaign.id, next);
+      markers.set(
+        campaign.id,
+        (archiveData.markers || []).map((marker) => normalizeMarker(campaign.id, marker, { id: marker.id }))
+      );
+      markerIcons.set(
+        campaign.id,
+        (archiveData.marker_icons || []).map((icon) => ({
+          id: icon.id || createId(),
+          campaign_id: campaign.id,
+          url: icon.url || '',
+          name: icon.name || '',
+          created_at: icon.created_at || nowIso()
+        }))
+      );
+      return getByToken(editToken);
     }
   };
 }

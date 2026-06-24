@@ -75,12 +75,14 @@ export function createSqliteStore(db) {
     WHERE id = @id AND campaign_id = @campaign_id
   `);
   const deleteMarkerStatement = db.prepare('DELETE FROM markers WHERE id = ? AND campaign_id = ?');
+  const deleteMarkersForCampaign = db.prepare('DELETE FROM markers WHERE campaign_id = ?');
   const insertMarkerIcon = db.prepare(`
     INSERT INTO campaign_marker_icons (id, campaign_id, url, name, created_at)
     VALUES (@id, @campaign_id, @url, @name, @created_at)
   `);
   const selectMarkerIconById = db.prepare('SELECT * FROM campaign_marker_icons WHERE id = ? AND campaign_id = ?');
   const deleteMarkerIconStatement = db.prepare('DELETE FROM campaign_marker_icons WHERE id = ? AND campaign_id = ?');
+  const deleteMarkerIconsForCampaign = db.prepare('DELETE FROM campaign_marker_icons WHERE campaign_id = ?');
   const countMarkersUsingIcon = db.prepare('SELECT COUNT(*) AS count FROM markers WHERE campaign_id = ? AND icon_url = ?');
 
   function findCampaignByToken(token) {
@@ -97,6 +99,48 @@ export function createSqliteStore(db) {
     if (!result || result.mode !== 'edit') throw notFound('Edit token not found');
     return result.campaign;
   }
+
+  const replaceArchiveTransaction = db.transaction((campaign, archiveData = {}) => {
+    const next = {
+      ...campaign,
+      name: archiveData.campaign?.name ?? campaign.name,
+      default_cursor_url: archiveData.campaign?.default_cursor_url ?? campaign.default_cursor_url,
+      pointer_cursor_url: archiveData.campaign?.pointer_cursor_url ?? campaign.pointer_cursor_url,
+      default_marker_icon_url: archiveData.campaign?.default_marker_icon_url ?? campaign.default_marker_icon_url,
+      default_marker_icon_style: archiveData.campaign?.default_marker_icon_style || campaign.default_marker_icon_style,
+      max_zoom: Number(archiveData.campaign?.max_zoom ?? campaign.max_zoom)
+    };
+    updateCampaign.run(next);
+    deleteMarkersForCampaign.run(campaign.id);
+    deleteMarkerIconsForCampaign.run(campaign.id);
+    for (const icon of archiveData.marker_icons || []) {
+      insertMarkerIcon.run({
+        id: icon.id || createId(),
+        campaign_id: campaign.id,
+        url: icon.url || '',
+        name: icon.name || '',
+        created_at: icon.created_at || nowIso()
+      });
+    }
+    for (const input of archiveData.markers || []) {
+      const timestamp = nowIso();
+      insertMarker.run({
+        id: input.id || createId(),
+        campaign_id: campaign.id,
+        lat: Number(input.lat ?? 0),
+        lng: Number(input.lng ?? 0),
+        title: input.title || 'New Location',
+        show_title: isDescriptionVisible(input.show_title ?? true) ? 1 : 0,
+        description: input.description ?? '',
+        show_description: isDescriptionVisible(input.show_description ?? true) ? 1 : 0,
+        icon_style: input.icon_style || DEFAULT_ICON_STYLE,
+        icon_url: input.icon_url ?? '',
+        chat_url: input.chat_url || '',
+        created_at: input.created_at || timestamp,
+        updated_at: timestamp
+      });
+    }
+  });
 
   return {
     createCampaign(input = {}) {
@@ -202,6 +246,12 @@ export function createSqliteStore(db) {
         throw new Error('Marker icon is in use');
       }
       return deleteMarkerIconStatement.run(iconId, campaign.id).changes > 0;
+    },
+
+    replaceCampaignArchive(editToken, archiveData = {}) {
+      const campaign = requireEditCampaign(editToken);
+      replaceArchiveTransaction(campaign, archiveData);
+      return this.getByToken(editToken);
     }
   };
 }

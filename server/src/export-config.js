@@ -16,6 +16,7 @@ export function buildExportConfig(result, campaignPatch = {}) {
     },
     markers: result.markers.map((marker) => ({
       id: marker.id,
+      campaign_id: marker.campaign_id,
       lat: marker.lat,
       lng: marker.lng,
       title: marker.title,
@@ -25,6 +26,13 @@ export function buildExportConfig(result, campaignPatch = {}) {
       icon_style: marker.icon_style,
       icon_url: marker.icon_url || '',
       chat_url: marker.chat_url
+    })),
+    marker_icons: (result.marker_icons || []).map((icon) => ({
+      id: icon.id,
+      campaign_id: icon.campaign_id,
+      url: icon.url,
+      name: icon.name || '',
+      created_at: icon.created_at
     }))
   };
 }

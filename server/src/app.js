@@ -7,6 +7,7 @@ import multer from 'multer';
 import archiver from 'archiver';
 
 import { streamCampaignZip } from './export-service.js';
+import { importCampaignArchive } from './import-service.js';
 import { createSqliteStore } from './sqlite-store.js';
 import {
   ensureRuntimeDirs,
@@ -254,6 +255,27 @@ export function createApp({
       });
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.post('/api/campaigns/:edit_token/import', activeUpload.single('archive'), async (req, res, next) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'archive file is required' });
+        return;
+      }
+      const result = await importCampaignArchive({
+        store: activeStore,
+        editToken: req.params.edit_token,
+        archivePath: req.file.path
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    } finally {
+      if (req.file?.path) {
+        await fs.promises.rm(req.file.path, { force: true }).catch(() => {});
+      }
     }
   });
 

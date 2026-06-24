@@ -63,6 +63,15 @@ export const apiClient = {
     });
   },
 
+  importArchive(editToken, file) {
+    const formData = new FormData();
+    formData.set('archive', file);
+    return request(buildApiPath('/api/campaigns/:edit_token/import', { edit_token: editToken }), {
+      method: 'POST',
+      body: formData
+    });
+  },
+
   exportUrl(editToken) {
     return buildApiPath('/api/campaigns/:edit_token/export', { edit_token: editToken });
   }

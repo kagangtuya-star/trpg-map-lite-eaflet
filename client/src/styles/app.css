@@ -198,6 +198,7 @@ input[readonly] {
 
 button,
 .export-link,
+.archive-control-button,
 .upload-button {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -210,7 +211,8 @@ button,
 }
 
 button:hover,
-.export-link:hover {
+.export-link:hover,
+.archive-control-button:hover {
   border-color: rgba(245, 158, 11, 0.36);
   background: var(--surface-850);
 }
@@ -263,6 +265,41 @@ button:disabled {
 .upload-button:has(input:disabled) {
   cursor: wait;
   opacity: 0.72;
+}
+
+.archive-control-wrap {
+  position: sticky;
+  bottom: -24px;
+  display: grid;
+  gap: 8px;
+  margin: auto -24px -24px;
+  border-top: 1px solid var(--line);
+  background: rgba(9, 9, 11, 0.94);
+  padding: 12px 24px 16px;
+  backdrop-filter: blur(16px);
+}
+
+.archive-control-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.archive-control-button {
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.archive-control-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.archive-file-input {
+  display: none;
 }
 
 .asset-preview {
