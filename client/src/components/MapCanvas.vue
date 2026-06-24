@@ -14,13 +14,14 @@ const props = defineProps({
   activeTool: { type: String, default: 'select' }
 });
 
-const emit = defineEmits(['map-click', 'marker-click']);
+const emit = defineEmits(['map-click', 'marker-click', 'marker-drag-end']);
 
 let map;
 let markerLayer;
 let coordControl;
 let mapContainer;
 let resizeObserver;
+let lastMarkerDragAt = 0;
 
 const cursorState = reactive({
   visible: false,
@@ -177,6 +178,16 @@ function emitMarkerClick(item) {
   });
 }
 
+function emitMarkerDragEnd(item, latlng) {
+  const point = map.latLngToContainerPoint(latlng);
+  emit('marker-drag-end', {
+    marker: item,
+    lat: Number(latlng.lat.toFixed(4)),
+    lng: Number(latlng.lng.toFixed(4)),
+    point: { x: point.x, y: point.y }
+  });
+}
+
 function updatePlacementCursor() {
   const container = document.getElementById('map');
   if (!container) return;
@@ -190,6 +201,7 @@ function renderMarkers() {
   markerLayer.clearLayers();
   props.markers.forEach((item) => {
     const marker = L.marker([item.lat, item.lng], {
+      draggable: props.mode === 'edit' && props.activeTool === 'select',
       icon: L.divIcon({
         className: 'magic-marker-shell',
         html: iconHtml(props.campaign.default_cursor_url, item.icon_style),
@@ -204,11 +216,18 @@ function renderMarkers() {
     });
     marker.on('click', (event) => {
       if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      if (Date.now() - lastMarkerDragAt < 250) {
+        return;
+      }
       if (props.mode === 'edit') {
         emitMarkerClick(item);
         return;
       }
       if (item.chat_url) window.open(item.chat_url, '_blank');
+    });
+    marker.on('dragend', () => {
+      lastMarkerDragAt = Date.now();
+      emitMarkerDragEnd(item, marker.getLatLng());
     });
   });
 }
@@ -234,6 +253,7 @@ watch(
     applyDynamicCursors(props.campaign);
     updatePlacementCursor();
     hideCustomCursor();
+    renderMarkers();
   }
 );
 

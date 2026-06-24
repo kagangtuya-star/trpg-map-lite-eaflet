@@ -80,6 +80,22 @@ async function saveMarker(marker) {
   await loadCampaign();
 }
 
+async function saveMarkerDrag(event) {
+  const marker = {
+    ...event.marker,
+    lat: event.lat,
+    lng: event.lng,
+    description: event.marker.description || ''
+  };
+  try {
+    await apiClient.saveMarker(token.value, marker);
+    await loadCampaign();
+  } catch (cause) {
+    error.value = cause.message;
+    await loadCampaign();
+  }
+}
+
 async function deleteMarker(id) {
   await apiClient.deleteMarker(token.value, id);
   closeMarkerPopover();
@@ -138,6 +154,7 @@ async function deleteMarker(id) {
           :active-tool="activeTool"
           @map-click="openDraftMarker"
           @marker-click="openExistingMarker"
+          @marker-drag-end="saveMarkerDrag"
         />
         <MarkerPopover
           v-if="payload.mode === 'edit' && activeMarker && popoverPosition"
