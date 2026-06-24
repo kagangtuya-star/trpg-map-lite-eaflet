@@ -10,20 +10,16 @@ const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;bor
 
 const props = defineProps({
   campaign: { type: Object, required: true },
-  markers: { type: Array, required: true },
   markerIcons: { type: Array, required: true },
   token: { type: String, required: true }
 });
 
 const emit = defineEmits([
   'refresh',
-  'edit-marker',
   'config-preview',
   'config-saved',
   'marker-icon-created',
-  'marker-icon-deleted',
-  'marker-deleted',
-  'replace-marker-icon'
+  'marker-icon-deleted'
 ]);
 
 const config = reactive({
@@ -36,7 +32,6 @@ const config = reactive({
 });
 const uploadingCursor = ref('');
 const uploadingMarkerIcons = ref(false);
-const replacingMarkerId = ref('');
 const uploadError = ref('');
 const markerIconError = ref('');
 const openSections = reactive({
@@ -231,29 +226,6 @@ function clearDefaultMarkerIcon() {
   config.default_marker_icon_style = config.default_marker_icon_style || DEFAULT_MARKER_ICON_STYLE;
 }
 
-async function replaceMarkerIcon(event, marker) {
-  const selectedFile = event.target.files?.[0];
-  if (!selectedFile) return;
-  replacingMarkerId.value = marker.id;
-  markerIconError.value = '';
-  try {
-    const uploadFile = await prepareMarkerIconUpload(selectedFile);
-    const result = await apiClient.uploadMarkerIcon(props.token, uploadFile);
-    emit('marker-icon-created', result.icon);
-    emit('replace-marker-icon', { marker, iconUrl: result.icon.url });
-  } catch (cause) {
-    markerIconError.value = cause.message;
-  } finally {
-    replacingMarkerId.value = '';
-    event.target.value = '';
-  }
-}
-
-async function deleteMarker(id) {
-  await apiClient.deleteMarker(props.token, id);
-  emit('marker-deleted', id);
-}
-
 function toggleSection(section) {
   openSections[section] = !openSections[section];
 }
@@ -358,20 +330,6 @@ function toggleSection(section) {
               <input type="file" accept="image/*,.svg" multiple :disabled="uploadingMarkerIcons" @change="uploadMarkerIcons" />
             </span>
             <p v-if="markerIconError" class="inline-error">{{ markerIconError }}</p>
-          </div>
-          <div class="marker-list">
-            <div v-for="item in markers" :key="item.id" class="marker-row">
-              <img v-if="item.icon_url" class="marker-row-icon" :src="item.icon_url" alt="" />
-              <span v-else class="marker-row-icon marker-row-icon--empty" aria-hidden="true"></span>
-              <button type="button" class="marker-title-button" @click="emit('edit-marker', item)">{{ item.title }}</button>
-              <span class="upload-button marker-replace-button" :title="t('editor.replaceMarkerIcon')">
-                <UploadCloudIcon />
-                <input type="file" accept="image/*,.svg" :disabled="replacingMarkerId === item.id" @change="replaceMarkerIcon($event, item)" />
-              </span>
-              <button type="button" class="marker-delete-button" :aria-label="t('editor.delete')" @click="deleteMarker(item.id)">
-                <TrashIcon />
-              </button>
-            </div>
           </div>
         </div>
       </section>

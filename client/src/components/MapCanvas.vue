@@ -97,6 +97,10 @@ function resizeMapToContainer() {
   applyZoomRange();
 }
 
+function refreshSize() {
+  resizeMapToContainer();
+}
+
 function initMap() {
   if (map) return;
   const bounds = campaignBounds();
@@ -108,8 +112,9 @@ function initMap() {
     maxZoom: overzoomMax(),
     maxBounds: bounds,
     maxBoundsViscosity: 1,
-    zoomControl: true
+    zoomControl: false
   });
+  L.control.zoom({ position: 'topright' }).addTo(map);
   mapContainer = map.getContainer();
   mapContainer.addEventListener('pointermove', updateCustomCursor);
   mapContainer.addEventListener('pointerleave', hideCustomCursor);
@@ -200,6 +205,17 @@ function emitMarkerDragEnd(item, latlng) {
     lng: Number(latlng.lng.toFixed(4)),
     point: { x: point.x, y: point.y }
   });
+}
+
+async function focusMarker(marker) {
+  await nextTick();
+  initMap();
+  if (!map || !Number.isFinite(Number(marker.lat)) || !Number.isFinite(Number(marker.lng))) {
+    return null;
+  }
+  map.panTo([marker.lat, marker.lng], { animate: false });
+  const point = map.latLngToContainerPoint([marker.lat, marker.lng]);
+  return { x: point.x, y: point.y };
 }
 
 function updatePlacementCursor() {
@@ -440,6 +456,11 @@ onBeforeUnmount(() => {
     map.remove();
     map = undefined;
   }
+});
+
+defineExpose({
+  focusMarker,
+  refreshSize
 });
 </script>
 

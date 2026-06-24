@@ -36,6 +36,9 @@ export const messages = {
     'editor.basicConfig': '地图基础配置',
     'editor.cursorConfig': '光标设置',
     'editor.markerManagement': '标记管理',
+    'editor.noMarkers': '暂无标记',
+    'editor.collapseConsole': '折叠控制台',
+    'editor.expandConsole': '展开控制台',
     'editor.name': '名称',
     'editor.defaultCursorUrl': '默认鼠标图标',
     'editor.pointerCursorUrl': '鼠标图标',
@@ -66,7 +69,8 @@ export const messages = {
     'marker.styleSize': '大小',
     'marker.save': '保存',
     'marker.delete': '删除',
-    'marker.cancel': '取消'
+    'marker.cancel': '取消',
+    'marker.untitled': '未命名标记'
   },
   en: {
     'app.title': 'TRPG Magic Academy Map',
@@ -100,6 +104,9 @@ export const messages = {
     'editor.basicConfig': 'Map basics',
     'editor.cursorConfig': 'Cursor settings',
     'editor.markerManagement': 'Marker management',
+    'editor.noMarkers': 'No markers yet',
+    'editor.collapseConsole': 'Collapse console',
+    'editor.expandConsole': 'Expand console',
     'editor.name': 'Name',
     'editor.defaultCursorUrl': 'Default mouse icon',
     'editor.pointerCursorUrl': 'Mouse icon',
@@ -130,7 +137,8 @@ export const messages = {
     'marker.styleSize': 'Size',
     'marker.save': 'Save',
     'marker.delete': 'Delete',
-    'marker.cancel': 'Cancel'
+    'marker.cancel': 'Cancel',
+    'marker.untitled': 'Untitled marker'
   }
 };
 

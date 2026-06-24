@@ -1,11 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import EditorPanel from '../components/EditorPanel.vue';
 import MapCanvas from '../components/MapCanvas.vue';
+import MarkerLayerPanel from '../components/MarkerLayerPanel.vue';
 import MarkerPopover from '../components/MarkerPopover.vue';
 import { apiClient } from '../lib/api-client.js';
+import { prepareMarkerIconUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 
 const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;';
@@ -20,6 +22,9 @@ const activeTool = ref('select');
 const activeMarker = ref(null);
 const popoverPosition = ref(null);
 const savingMarker = ref(false);
+const selectedMarkerId = ref('');
+const mapCanvasRef = ref(null);
+const isConsoleCollapsed = ref(false);
 const previewCampaign = computed(() =>
   payload.value?.campaign ? { ...payload.value.campaign, ...(configPreview.value || {}) } : null
 );
@@ -58,33 +63,43 @@ function createDraftMarker(event) {
 function openDraftMarker(event) {
   activeMarker.value = createDraftMarker(event);
   popoverPosition.value = event.point;
+  selectedMarkerId.value = '';
+}
+
+function normalizeEditableMarker(marker) {
+  return {
+    ...marker,
+    description: marker.description || '',
+    show_title: marker.show_title !== false && marker.show_title !== 0,
+    show_description: marker.show_description !== false && marker.show_description !== 0
+  };
 }
 
 function openExistingMarker(event) {
-  activeMarker.value = {
-    ...event.marker,
-    description: event.marker.description || '',
-    show_title: event.marker.show_title !== false && event.marker.show_title !== 0,
-    show_description: event.marker.show_description !== false && event.marker.show_description !== 0
-  };
+  activeMarker.value = normalizeEditableMarker(event.marker);
   popoverPosition.value = event.point;
+  selectedMarkerId.value = event.marker.id || '';
   activeTool.value = 'select';
 }
 
-function openPanelMarker(item) {
-  activeMarker.value = {
-    ...item,
-    description: item.description || '',
-    show_title: item.show_title !== false && item.show_title !== 0,
-    show_description: item.show_description !== false && item.show_description !== 0
-  };
-  popoverPosition.value = { x: 76, y: 96 };
+async function focusAndEditMarker(item) {
+  const point = await mapCanvasRef.value?.focusMarker?.(item);
+  activeMarker.value = normalizeEditableMarker(item);
+  popoverPosition.value = point || { x: 76, y: 96 };
+  selectedMarkerId.value = item.id || '';
   activeTool.value = 'select';
 }
 
 function closeMarkerPopover() {
   activeMarker.value = null;
   popoverPosition.value = null;
+  selectedMarkerId.value = '';
+}
+
+async function toggleConsole() {
+  isConsoleCollapsed.value = !isConsoleCollapsed.value;
+  await nextTick();
+  mapCanvasRef.value?.refreshSize?.();
 }
 
 function updateConfigPreview(config) {
@@ -137,6 +152,29 @@ function removeSavedMarker(markerId) {
     ...payload.value,
     markers: (payload.value.markers || []).filter((marker) => marker.id !== markerId)
   };
+  if (selectedMarkerId.value === markerId) {
+    closeMarkerPopover();
+  }
+}
+
+async function uploadReplacementMarkerIcon({ event, marker }) {
+  const selectedFile = event.target.files?.[0];
+  if (!selectedFile) return;
+  try {
+    const uploadFile = await prepareMarkerIconUpload(selectedFile);
+    const result = await apiClient.uploadMarkerIcon(token.value, uploadFile);
+    applySavedMarkerIcon(result.icon);
+    await replaceMarkerIcon({ marker, iconUrl: result.icon.url });
+  } catch (cause) {
+    error.value = cause.message;
+  } finally {
+    event.target.value = '';
+  }
+}
+
+async function deleteLayerMarker(id) {
+  await apiClient.deleteMarker(token.value, id);
+  removeSavedMarker(id);
 }
 
 async function saveMarker(marker) {
@@ -193,26 +231,61 @@ async function deleteMarker(id) {
 </script>
 
 <template>
-  <main class="app-shell" :class="{ 'view-only': payload?.mode === 'view' }">
+  <main class="app-shell" :class="{ 'view-only': payload?.mode === 'view', 'console-collapsed': isConsoleCollapsed }">
     <div v-if="loading" class="state-panel">{{ t('map.loading') }}</div>
     <div v-else-if="error" class="state-panel error">{{ error }}</div>
     <template v-else-if="payload">
       <EditorPanel
         v-if="payload.mode === 'edit'"
+        :class="{ 'editor-panel--collapsed': isConsoleCollapsed }"
         :campaign="payload.campaign"
-        :markers="payload.markers"
         :marker-icons="payload.marker_icons || []"
         :token="token"
         @refresh="loadCampaign"
         @config-saved="applySavedCampaign"
-        @edit-marker="openPanelMarker"
         @config-preview="updateConfigPreview"
         @marker-icon-created="applySavedMarkerIcon"
         @marker-icon-deleted="removeSavedMarkerIcon"
-        @marker-deleted="removeSavedMarker"
-        @replace-marker-icon="replaceMarkerIcon"
       />
       <section class="map-workspace">
+        <div v-if="payload.mode === 'edit'" class="map-control-stack">
+          <button
+            type="button"
+            class="editor-panel-toggle"
+            :class="{ active: !isConsoleCollapsed }"
+            :title="isConsoleCollapsed ? t('editor.expandConsole') : t('editor.collapseConsole')"
+            @click="toggleConsole"
+          >
+            {{ isConsoleCollapsed ? '>' : '<' }}
+          </button>
+          <div class="map-toolbar" :aria-label="t('map.tools')">
+            <button
+              type="button"
+              class="tool-button"
+              :class="{ active: activeTool === 'select' }"
+              :title="t('map.select')"
+              @click="activeTool = 'select'"
+            >
+              S
+            </button>
+            <button
+              type="button"
+              class="tool-button"
+              :class="{ active: activeTool === 'marker' }"
+              :title="t('map.placeMarker')"
+              @click="activeTool = 'marker'"
+            >
+              +
+            </button>
+          </div>
+          <MarkerLayerPanel
+            :markers="payload.markers"
+            :selected-marker-id="selectedMarkerId"
+            @edit-marker="focusAndEditMarker"
+            @delete-marker="deleteLayerMarker"
+            @replace-marker-icon="uploadReplacementMarkerIcon"
+          />
+        </div>
         <button
           v-if="payload.mode === 'view'"
           type="button"
@@ -222,27 +295,8 @@ async function deleteMarker(id) {
         >
           {{ localeLabel }} / {{ localeToggleLabel }}
         </button>
-        <div v-if="payload.mode === 'edit'" class="map-toolbar" :aria-label="t('map.tools')">
-          <button
-            type="button"
-            class="tool-button"
-            :class="{ active: activeTool === 'select' }"
-            :title="t('map.select')"
-            @click="activeTool = 'select'"
-          >
-            S
-          </button>
-          <button
-            type="button"
-            class="tool-button"
-            :class="{ active: activeTool === 'marker' }"
-            :title="t('map.placeMarker')"
-            @click="activeTool = 'marker'"
-          >
-            +
-          </button>
-        </div>
         <MapCanvas
+          ref="mapCanvasRef"
           :campaign="previewCampaign"
           :markers="payload.markers"
           :mode="payload.mode"

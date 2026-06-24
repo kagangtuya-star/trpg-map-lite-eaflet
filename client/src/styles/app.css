@@ -57,6 +57,10 @@ a {
   background: var(--surface-950);
 }
 
+.app-shell.console-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
 .app-shell.view-only {
   grid-template-columns: minmax(0, 1fr);
   background: transparent;
@@ -74,6 +78,14 @@ a {
   backdrop-filter: blur(16px);
   box-shadow: 18px 0 50px rgba(0, 0, 0, 0.34);
   padding: 24px;
+}
+
+.editor-panel--collapsed {
+  overflow: hidden;
+  border-right: 0;
+  padding: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .panel-kicker {
@@ -312,11 +324,17 @@ button.ghost {
   aspect-ratio: var(--map-aspect-ratio);
 }
 
-.map-toolbar {
+.map-control-stack {
   position: absolute;
-  z-index: 500;
+  z-index: 590;
   left: 14px;
-  top: 88px;
+  top: 14px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.map-control-stack .map-toolbar {
   display: grid;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -324,6 +342,130 @@ button.ghost {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   padding: 8px;
+}
+
+.editor-panel-toggle {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.48);
+  color: var(--muted-strong);
+  padding: 0;
+  backdrop-filter: blur(8px);
+}
+
+.editor-panel-toggle.active {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--accent-bright);
+}
+
+.map-control-stack .marker-layer-panel {
+  position: relative;
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.marker-layer-toggle {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  place-items: center;
+  gap: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.48);
+  color: #fff;
+  padding: 4px;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+.marker-layer-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.marker-layer-toggle span {
+  color: var(--muted-strong);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.marker-layer-toggle.active {
+  border-color: rgba(245, 158, 11, 0.68);
+  color: var(--accent-bright);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.34);
+}
+
+.marker-layer-panel__drawer {
+  display: grid;
+  width: min(320px, calc(100vw - 82px));
+  max-height: min(420px, calc(100vh - 184px));
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 18, 21, 0.94);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.48);
+  padding: 10px;
+  pointer-events: auto;
+  backdrop-filter: blur(14px);
+}
+
+.marker-layer-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.marker-layer-panel__drag-handle {
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+.marker-layer-panel__header span,
+.marker-layer-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.marker-layer-list {
+  display: grid;
+  max-height: 360px;
+  gap: 6px;
+  overflow: auto;
+}
+
+.marker-layer-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 34px 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.42);
+  padding: 4px;
+}
+
+.marker-layer-row.active {
+  border-color: rgba(245, 158, 11, 0.58);
+  background: rgba(92, 56, 20, 0.48);
+}
+
+.marker-layer-row:hover .marker-delete-button,
+.marker-layer-row:focus-within .marker-delete-button,
+.marker-layer-row:hover .marker-replace-button,
+.marker-layer-row:focus-within .marker-replace-button {
+  opacity: 1;
 }
 
 .tool-button,
@@ -930,6 +1072,11 @@ button.ghost {
     grid-template-rows: minmax(280px, 42vh) minmax(0, 1fr);
   }
 
+  .app-shell.console-collapsed {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
   .editor-panel {
     grid-row: 2;
     border-top: 1px solid var(--line);
@@ -938,6 +1085,20 @@ button.ghost {
 
   .map-workspace {
     grid-row: 1;
+  }
+
+  .app-shell.console-collapsed .map-workspace {
+    min-height: 100vh;
+  }
+
+  .map-control-stack {
+    left: 10px;
+    top: 10px;
+  }
+
+  .marker-layer-panel__drawer {
+    width: min(300px, calc(100vw - 70px));
+    max-height: calc(42vh - 86px);
   }
 
   .create-panel {
