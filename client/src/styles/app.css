@@ -155,6 +155,18 @@ input[readonly] {
   padding-right: 48px;
 }
 
+.asset-picker-row {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-900);
+  padding: 5px 46px 5px 8px;
+}
+
 button,
 .export-link,
 .upload-button {
@@ -233,6 +245,10 @@ button:disabled {
 .asset-preview--marker,
 .asset-preview--cursor {
   margin-top: 2px;
+}
+
+.asset-picker-row .asset-preview {
+  margin-top: 0;
 }
 
 button.ghost {
@@ -424,15 +440,102 @@ button.ghost {
   gap: 6px;
 }
 
+.marker-icon-library {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.26);
+  padding: 10px 48px 10px 10px;
+}
+
+.default-marker-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.26);
+  padding: 10px;
+}
+
+.marker-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 8px;
+}
+
+.marker-icon-tile {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.7);
+  padding: 5px;
+}
+
+.marker-icon-tile img,
+.marker-icon-choice img,
+.marker-row-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.marker-icon-delete {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 0;
+  background: rgba(239, 68, 68, 0.88);
+  color: white;
+  opacity: 0;
+  padding: 0;
+}
+
+.marker-icon-tile:hover .marker-icon-delete,
+.marker-icon-delete:focus-visible {
+  opacity: 1;
+}
+
+.marker-icon-delete svg {
+  width: 14px;
+  height: 14px;
+}
+
+.marker-icon-upload-button {
+  top: 10px;
+  right: 10px;
+}
+
 .marker-row {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: 28px minmax(0, 1fr) 34px 34px;
   align-items: center;
   gap: 6px;
   border-radius: 8px;
   background: rgba(9, 9, 11, 0.42);
   padding: 4px;
+}
+
+.marker-row-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.marker-row-icon--empty {
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.18);
 }
 
 .marker-title-button {
@@ -462,8 +565,23 @@ button.ghost {
   padding: 0;
 }
 
+.marker-replace-button {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+}
+
 .marker-row:hover .marker-delete-button,
-.marker-delete-button:focus-visible {
+.marker-row:focus-within .marker-delete-button,
+.marker-delete-button:focus-visible,
+.marker-row:hover .marker-replace-button,
+.marker-row:focus-within .marker-replace-button,
+.marker-replace-button:focus-visible {
   opacity: 1;
 }
 
@@ -475,6 +593,43 @@ button.ghost {
 .marker-delete-button svg {
   width: 17px;
   height: 17px;
+}
+
+.marker-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 8px;
+}
+
+.marker-icon-choice {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  min-width: 38px;
+  padding: 5px;
+}
+
+.marker-icon-choice.active {
+  border-color: rgba(245, 158, 11, 0.68);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.34);
+}
+
+.marker-style-controls {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.marker-style-controls input[type="color"] {
+  height: 38px;
+  padding: 3px;
+}
+
+.marker-style-controls input[type="range"] {
+  padding-right: 0;
+  padding-left: 0;
+  box-shadow: none;
 }
 
 .state-panel {
@@ -604,6 +759,10 @@ button.ghost {
   height: 18px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22), 0 0 18px rgba(245, 158, 11, 0.84);
+}
+
+.magic-marker-shell .custom-magic-marker {
+  pointer-events: none;
 }
 
 .custom-magic-marker--image {

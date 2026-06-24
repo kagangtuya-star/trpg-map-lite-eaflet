@@ -57,6 +57,80 @@ test('memory store upserts and deletes markers for edit token', () => {
   assert.equal(store.getByToken(campaign.view_token).markers.length, 0);
 });
 
+test('memory store saves campaign marker icons and marker icon_url', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({
+    name: 'Icon Map',
+    default_cursor_url: '/cursors/wand.png',
+    pointer_cursor_url: '/cursors/hand.png'
+  });
+
+  const firstIcon = store.addMarkerIcon(campaign.edit_token, {
+    url: '/uploads/marker-icons/a.webp',
+    name: 'a.webp'
+  });
+  const secondIcon = store.addMarkerIcon(campaign.edit_token, {
+    url: '/uploads/marker-icons/b.webp',
+    name: 'b.webp'
+  });
+  const marker = store.upsertMarker(campaign.edit_token, {
+    lat: 1,
+    lng: 2,
+    title: 'Gate',
+    description: '',
+    icon_style: 'background:#d7b56d',
+    icon_url: firstIcon.url,
+    chat_url: ''
+  });
+
+  const fetched = store.getByToken(campaign.edit_token);
+  assert.equal(fetched.marker_icons.length, 2);
+  assert.equal(fetched.marker_icons[0].url, firstIcon.url);
+  assert.equal(fetched.marker_icons[1].url, secondIcon.url);
+  assert.equal(fetched.markers[0].id, marker.id);
+  assert.equal(fetched.markers[0].icon_url, firstIcon.url);
+});
+
+test('memory store refuses to delete marker icons that are in use', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Icon Guard' });
+  const icon = store.addMarkerIcon(campaign.edit_token, {
+    url: '/uploads/marker-icons/used.webp',
+    name: 'used.webp'
+  });
+
+  store.upsertMarker(campaign.edit_token, {
+    lat: 1,
+    lng: 2,
+    title: 'Used',
+    description: '',
+    icon_style: 'background:#d7b56d',
+    icon_url: icon.url,
+    chat_url: ''
+  });
+
+  assert.throws(() => store.deleteMarkerIcon(campaign.edit_token, icon.id), /Marker icon is in use/);
+});
+
+test('memory store allows clearing marker icon_url back to style rendering', () => {
+  const store = createMemoryStore();
+  const campaign = store.createCampaign({ name: 'Icon Clear' });
+  const marker = store.upsertMarker(campaign.edit_token, {
+    lat: 1,
+    lng: 2,
+    title: 'Clear',
+    icon_url: '/uploads/marker-icons/clear.webp'
+  });
+
+  const cleared = store.upsertMarker(campaign.edit_token, {
+    ...marker,
+    icon_url: ''
+  });
+
+  assert.equal(cleared.icon_url, '');
+  assert.equal(store.getByToken(campaign.edit_token).markers[0].icon_url, '');
+});
+
 test('buildExportConfig strips edit token and keeps view data', () => {
   const store = createMemoryStore();
   const campaign = store.createCampaign({ name: 'Exported', max_zoom: 2 });
@@ -64,7 +138,8 @@ test('buildExportConfig strips edit token and keeps view data', () => {
     lat: 1,
     lng: 2,
     title: 'Gate',
-    description: 'North entrance'
+    description: 'North entrance',
+    icon_url: '/uploads/marker-icons/gate.webp'
   });
 
   const config = buildExportConfig(store.getByToken(campaign.edit_token));
@@ -74,6 +149,7 @@ test('buildExportConfig strips edit token and keeps view data', () => {
   assert.equal(config.campaign.edit_token, undefined);
   assert.equal(config.markers[0].title, 'Gate');
   assert.equal(config.markers[0].description, 'North entrance');
+  assert.equal(config.markers[0].icon_url, '/uploads/marker-icons/gate.webp');
 });
 
 test('ensureDatabaseDirectory creates missing parent directory', async () => {

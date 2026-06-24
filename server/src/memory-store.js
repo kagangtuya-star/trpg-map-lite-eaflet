@@ -29,6 +29,7 @@ function normalizeMarker(campaignId, input = {}, existing = {}) {
     title: input.title || existing.title || 'New Location',
     description: input.description ?? existing.description ?? '',
     icon_style: input.icon_style || existing.icon_style || DEFAULT_ICON_STYLE,
+    icon_url: input.icon_url ?? existing.icon_url ?? '',
     chat_url: input.chat_url || existing.chat_url || '',
     created_at: existing.created_at || timestamp,
     updated_at: timestamp
@@ -38,6 +39,7 @@ function normalizeMarker(campaignId, input = {}, existing = {}) {
 export function createMemoryStore() {
   const campaigns = new Map();
   const markers = new Map();
+  const markerIcons = new Map();
 
   function findCampaignByToken(token) {
     for (const campaign of campaigns.values()) {
@@ -62,6 +64,7 @@ export function createMemoryStore() {
       const campaign = normalizeCampaign(input);
       campaigns.set(campaign.id, campaign);
       markers.set(campaign.id, []);
+      markerIcons.set(campaign.id, []);
       return campaign;
     },
 
@@ -71,7 +74,8 @@ export function createMemoryStore() {
       return {
         mode: result.mode,
         campaign: result.campaign,
-        markers: [...(markers.get(result.campaign.id) || [])]
+        markers: [...(markers.get(result.campaign.id) || [])],
+        marker_icons: [...(markerIcons.get(result.campaign.id) || [])]
       };
     },
 
@@ -106,6 +110,36 @@ export function createMemoryStore() {
       const next = campaignMarkers.filter((marker) => marker.id !== markerId);
       markers.set(campaign.id, next);
       return next.length !== campaignMarkers.length;
+    },
+
+    addMarkerIcon(editToken, input = {}) {
+      const campaign = requireEditCampaign(editToken);
+      const icon = {
+        id: createId(),
+        campaign_id: campaign.id,
+        url: input.url,
+        name: input.name || '',
+        created_at: nowIso()
+      };
+      const icons = markerIcons.get(campaign.id) || [];
+      markerIcons.set(campaign.id, [...icons, icon]);
+      return icon;
+    },
+
+    deleteMarkerIcon(editToken, iconId) {
+      const campaign = requireEditCampaign(editToken);
+      const icons = markerIcons.get(campaign.id) || [];
+      const icon = icons.find((item) => item.id === iconId);
+      if (!icon) return false;
+      const campaignMarkers = markers.get(campaign.id) || [];
+      if (campaignMarkers.some((marker) => marker.icon_url === icon.url)) {
+        throw new Error('Marker icon is in use');
+      }
+      markerIcons.set(
+        campaign.id,
+        icons.filter((item) => item.id !== iconId)
+      );
+      return true;
     }
   };
 }

@@ -44,6 +44,7 @@ function createDraftMarker(event) {
     title: '',
     description: '',
     icon_style: 'background:#d7b56d;border:2px solid #3a2b1f;',
+    icon_url: '',
     chat_url: ''
   };
 }
@@ -98,6 +99,22 @@ function applySavedMarker(marker) {
   };
 }
 
+function applySavedMarkerIcon(icon) {
+  if (!payload.value) return;
+  payload.value = {
+    ...payload.value,
+    marker_icons: [...(payload.value.marker_icons || []), icon]
+  };
+}
+
+function removeSavedMarkerIcon(iconId) {
+  if (!payload.value) return;
+  payload.value = {
+    ...payload.value,
+    marker_icons: (payload.value.marker_icons || []).filter((icon) => icon.id !== iconId)
+  };
+}
+
 async function saveMarker(marker) {
   const result = await apiClient.saveMarker(token.value, marker);
   applySavedMarker(result.marker);
@@ -113,6 +130,19 @@ async function saveMarkerDrag(event) {
   };
   try {
     const result = await apiClient.saveMarker(token.value, marker);
+    applySavedMarker(result.marker);
+  } catch (cause) {
+    error.value = cause.message;
+  }
+}
+
+async function replaceMarkerIcon({ marker, iconUrl }) {
+  try {
+    const result = await apiClient.saveMarker(token.value, {
+      ...marker,
+      description: marker.description || '',
+      icon_url: iconUrl
+    });
     applySavedMarker(result.marker);
   } catch (cause) {
     error.value = cause.message;
@@ -135,11 +165,15 @@ async function deleteMarker(id) {
         v-if="payload.mode === 'edit'"
         :campaign="payload.campaign"
         :markers="payload.markers"
+        :marker-icons="payload.marker_icons || []"
         :token="token"
         @refresh="loadCampaign"
         @config-saved="applySavedCampaign"
         @edit-marker="openPanelMarker"
         @config-preview="updateConfigPreview"
+        @marker-icon-created="applySavedMarkerIcon"
+        @marker-icon-deleted="removeSavedMarkerIcon"
+        @replace-marker-icon="replaceMarkerIcon"
       />
       <section class="map-workspace">
         <button
@@ -178,11 +212,13 @@ async function deleteMarker(id) {
           :active-tool="activeTool"
           @map-click="openDraftMarker"
           @marker-click="openExistingMarker"
+          @marker-drag-start="closeMarkerPopover"
           @marker-drag-end="saveMarkerDrag"
         />
         <MarkerPopover
           v-if="payload.mode === 'edit' && activeMarker && popoverPosition"
           :marker="activeMarker"
+          :marker-icons="payload.marker_icons || []"
           :position="popoverPosition"
           @save="saveMarker"
           @delete="deleteMarker"

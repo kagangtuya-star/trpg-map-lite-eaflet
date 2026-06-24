@@ -3,15 +3,25 @@ import { computed, defineComponent, h, reactive, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { apiClient } from '../lib/api-client.js';
+import { prepareCursorUpload, prepareMarkerIconUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 
 const props = defineProps({
   campaign: { type: Object, required: true },
   markers: { type: Array, required: true },
+  markerIcons: { type: Array, required: true },
   token: { type: String, required: true }
 });
 
-const emit = defineEmits(['refresh', 'edit-marker', 'config-preview', 'config-saved']);
+const emit = defineEmits([
+  'refresh',
+  'edit-marker',
+  'config-preview',
+  'config-saved',
+  'marker-icon-created',
+  'marker-icon-deleted',
+  'replace-marker-icon'
+]);
 
 const config = reactive({
   name: '',
@@ -20,7 +30,10 @@ const config = reactive({
   max_zoom: 4
 });
 const uploadingCursor = ref('');
+const uploadingMarkerIcons = ref(false);
+const replacingMarkerId = ref('');
 const uploadError = ref('');
+const markerIconError = ref('');
 const openSections = reactive({
   campaign: true,
   cursors: true,
@@ -130,13 +143,67 @@ async function uploadCursor(event, target) {
   uploadingCursor.value = target;
   uploadError.value = '';
   try {
-    const result = await apiClient.uploadCursor(selectedFile);
+    const uploadFile = await prepareCursorUpload(selectedFile);
+    const result = await apiClient.uploadCursor(uploadFile);
     if (target === 'default') config.default_cursor_url = result.url;
     else config.pointer_cursor_url = result.url;
   } catch (cause) {
     uploadError.value = cause.message;
   } finally {
     uploadingCursor.value = '';
+    event.target.value = '';
+  }
+}
+
+async function uploadMarkerIcons(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  uploadingMarkerIcons.value = true;
+  markerIconError.value = '';
+  const failures = [];
+  try {
+    for (const file of files) {
+      try {
+        const uploadFile = await prepareMarkerIconUpload(file);
+        const result = await apiClient.uploadMarkerIcon(props.token, uploadFile);
+        emit('marker-icon-created', result.icon);
+      } catch (cause) {
+        failures.push(cause.message);
+      }
+    }
+    if (failures.length) {
+      markerIconError.value = `${failures.length} file(s) failed: ${failures[0]}`;
+    }
+  } finally {
+    uploadingMarkerIcons.value = false;
+    event.target.value = '';
+  }
+}
+
+async function deleteMarkerIcon(icon) {
+  markerIconError.value = '';
+  try {
+    await apiClient.deleteMarkerIcon(props.token, icon.id);
+    emit('marker-icon-deleted', icon.id);
+  } catch (cause) {
+    markerIconError.value = cause.message;
+  }
+}
+
+async function replaceMarkerIcon(event, marker) {
+  const selectedFile = event.target.files?.[0];
+  if (!selectedFile) return;
+  replacingMarkerId.value = marker.id;
+  markerIconError.value = '';
+  try {
+    const uploadFile = await prepareMarkerIconUpload(selectedFile);
+    const result = await apiClient.uploadMarkerIcon(props.token, uploadFile);
+    emit('marker-icon-created', result.icon);
+    emit('replace-marker-icon', { marker, iconUrl: result.icon.url });
+  } catch (cause) {
+    markerIconError.value = cause.message;
+  } finally {
+    replacingMarkerId.value = '';
     event.target.value = '';
   }
 }
@@ -189,26 +256,14 @@ function toggleSection(section) {
         </button>
         <div v-if="openSections.cursors" class="accordion-content">
           <label>
-            {{ t('editor.defaultCursorUrl') }}
-            <span class="file-url-row">
-              <input v-model="config.default_cursor_url" />
-              <span class="upload-button icon-upload-button" :title="t('editor.uploadCursor')">
-                <UploadCloudIcon />
-                <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'default')" />
-              </span>
-            </span>
-            <img v-if="config.default_cursor_url" class="asset-preview asset-preview--marker" :src="config.default_cursor_url" alt="" />
-          </label>
-          <label>
             {{ t('editor.pointerCursorUrl') }}
-            <span class="file-url-row">
-              <input v-model="config.pointer_cursor_url" />
+            <span class="asset-picker-row">
+              <img v-if="config.pointer_cursor_url" class="asset-preview asset-preview--cursor" :src="config.pointer_cursor_url" alt="" />
               <span class="upload-button icon-upload-button" :title="t('editor.uploadCursor')">
                 <UploadCloudIcon />
-                <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'pointer')" />
+                <input type="file" accept="image/*,.cur,.ico,.svg" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'pointer')" />
               </span>
             </span>
-            <img v-if="config.pointer_cursor_url" class="asset-preview asset-preview--cursor" :src="config.pointer_cursor_url" alt="" />
           </label>
           <p v-if="uploadError" class="inline-error">{{ uploadError }}</p>
         </div>
@@ -220,9 +275,37 @@ function toggleSection(section) {
           <ChevronIcon :class="{ 'is-open': openSections.markers }" />
         </button>
         <div v-if="openSections.markers" class="accordion-content">
+          <div class="default-marker-settings">
+            <div class="field-block">{{ t('editor.defaultMarkerSettings') }}</div>
+            <div class="marker-icon-choice active">
+              <span class="custom-magic-marker" style="background:#d7b56d;border:2px solid #3a2b1f;"></span>
+            </div>
+          </div>
+          <div class="marker-icon-library">
+            <div class="field-block">{{ t('editor.markerIcons') }}</div>
+            <div class="marker-icon-grid">
+              <div v-for="icon in markerIcons" :key="icon.id" class="marker-icon-tile">
+                <img :src="icon.url" :alt="icon.name" />
+                <button type="button" class="marker-icon-delete" :aria-label="t('editor.delete')" @click="deleteMarkerIcon(icon)">
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+            <span class="upload-button marker-icon-upload-button" :title="t('editor.uploadMarkerIcon')">
+              <UploadCloudIcon />
+              <input type="file" accept="image/*,.svg" multiple :disabled="uploadingMarkerIcons" @change="uploadMarkerIcons" />
+            </span>
+            <p v-if="markerIconError" class="inline-error">{{ markerIconError }}</p>
+          </div>
           <div class="marker-list">
             <div v-for="item in markers" :key="item.id" class="marker-row">
+              <img v-if="item.icon_url" class="marker-row-icon" :src="item.icon_url" alt="" />
+              <span v-else class="marker-row-icon marker-row-icon--empty" aria-hidden="true"></span>
               <button type="button" class="marker-title-button" @click="emit('edit-marker', item)">{{ item.title }}</button>
+              <span class="upload-button marker-replace-button" :title="t('editor.replaceMarkerIcon')">
+                <UploadCloudIcon />
+                <input type="file" accept="image/*,.svg" :disabled="replacingMarkerId === item.id" @change="replaceMarkerIcon($event, item)" />
+              </span>
               <button type="button" class="marker-delete-button" :aria-label="t('editor.delete')" @click="deleteMarker(item.id)">
                 <TrashIcon />
               </button>

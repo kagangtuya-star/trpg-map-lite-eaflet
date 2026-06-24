@@ -14,12 +14,13 @@ import {
   getGeneratedMaxZoom,
   getGeneratedTileBounds,
   CURSORS_DIR,
+  MARKER_ICONS_DIR,
   PUBLIC_DIR,
   TILES_DIR,
   UPLOADS_DIR
 } from './tile-service.js';
 
-const CURSOR_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.cur', '.ico']);
+const CURSOR_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.cur', '.ico', '.svg']);
 
 function createCursorUpload() {
   return multer({
@@ -47,11 +48,46 @@ function createCursorUpload() {
   });
 }
 
-export function createApp({ store, upload, cursorUpload, tileGenerator = generateTiles, archiveFactory = archiver } = {}) {
+function createImageUpload({ destinationDir, errorMessage }) {
+  return multer({
+    storage: multer.diskStorage({
+      destination(_req, _file, callback) {
+        fs.mkdirSync(destinationDir, { recursive: true });
+        callback(null, destinationDir);
+      },
+      filename(_req, file, callback) {
+        const ext = path.extname(file.originalname || '').toLowerCase();
+        callback(null, `${randomUUID()}${CURSOR_EXTENSIONS.has(ext) ? ext : ''}`);
+      }
+    }),
+    fileFilter(_req, file, callback) {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const isImageFile = CURSOR_EXTENSIONS.has(ext);
+      if (file.mimetype?.startsWith('image/') || isImageFile) callback(null, true);
+      else {
+        const error = new Error(errorMessage);
+        error.status = 400;
+        callback(error);
+      }
+    },
+    limits: { fileSize: 1024 * 1024 }
+  });
+}
+
+export function createApp({
+  store,
+  upload,
+  cursorUpload,
+  markerIconUpload,
+  tileGenerator = generateTiles,
+  archiveFactory = archiver
+} = {}) {
   const app = express();
   const activeStore = store;
   const activeUpload = upload || multer({ dest: UPLOADS_DIR });
   const activeCursorUpload = cursorUpload || createCursorUpload();
+  const activeMarkerIconUpload =
+    markerIconUpload || createImageUpload({ destinationDir: MARKER_ICONS_DIR, errorMessage: 'icon file must be an image' });
 
   app.use(express.json());
   app.use(express.static(PUBLIC_DIR));
@@ -102,6 +138,22 @@ export function createApp({ store, upload, cursorUpload, tileGenerator = generat
       return;
     }
     res.status(201).json({ url: `/uploads/cursors/${req.file.filename}` });
+  });
+
+  app.post('/api/campaigns/:edit_token/marker-icons', activeMarkerIconUpload.single('icon'), (req, res, next) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'icon file is required' });
+        return;
+      }
+      const icon = activeStore.addMarkerIcon(req.params.edit_token, {
+        url: `/uploads/marker-icons/${req.file.filename}`,
+        name: req.file.originalname || req.file.filename
+      });
+      res.status(201).json({ icon });
+    } catch (error) {
+      next(error);
+    }
   });
 
   async function attachTileBounds(result) {
@@ -171,6 +223,23 @@ export function createApp({ store, upload, cursorUpload, tileGenerator = generat
       activeStore.deleteMarker(req.params.edit_token, req.params.id);
       res.status(204).end();
     } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/campaigns/:edit_token/marker-icons/:id', (req, res, next) => {
+    try {
+      const deleted = activeStore.deleteMarkerIcon(req.params.edit_token, req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: 'Marker icon not found' });
+        return;
+      }
+      res.status(204).end();
+    } catch (error) {
+      if (error.message === 'Marker icon is in use') {
+        res.status(409).json({ error: error.message });
+        return;
+      }
       next(error);
     }
   });

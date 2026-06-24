@@ -5,6 +5,7 @@ import { t } from '../lib/i18n.js';
 
 const props = defineProps({
   marker: { type: Object, required: true },
+  markerIcons: { type: Array, default: () => [] },
   position: { type: Object, required: true }
 });
 
@@ -22,10 +23,22 @@ const form = reactive({
   title: '',
   description: '',
   icon_style: '',
+  icon_url: '',
   chat_url: ''
+});
+const styleControls = reactive({
+  color: '#d7b56d',
+  size: 18
 });
 
 const isExisting = computed(() => Boolean(form.id));
+const usesStyleIcon = computed(() => !form.icon_url);
+const styleIconPreview = computed(() => ({
+  width: `${styleControls.size}px`,
+  height: `${styleControls.size}px`,
+  background: styleControls.color,
+  border: '2px solid #3a2b1f'
+}));
 const popoverStyle = computed(() => {
   const position = clampToViewport(props.position.x + popoverOffset, props.position.y + popoverOffset);
   return {
@@ -58,21 +71,37 @@ function measurePopover() {
   popoverSize.height = rect.height;
 }
 
+function readStyleControls(iconStyle) {
+  const color = String(iconStyle || '').match(/background:\s*(#[0-9a-fA-F]{3,8})/)?.[1];
+  const size = String(iconStyle || '').match(/width:\s*(\d+)px/)?.[1];
+  styleControls.color = color || '#d7b56d';
+  styleControls.size = Math.min(48, Math.max(12, Number(size || 18)));
+}
+
+function writeIconStyle() {
+  form.icon_style = `width:${styleControls.size}px;height:${styleControls.size}px;background:${styleControls.color};border:2px solid #3a2b1f;`;
+}
+
 watch(
   () => props.marker,
   (marker) => {
+    const iconStyle = marker.icon_style || 'background:#d7b56d;border:2px solid #3a2b1f;';
     Object.assign(form, {
       id: marker.id || '',
       lat: Number(marker.lat ?? 0),
       lng: Number(marker.lng ?? 0),
       title: marker.title || '',
       description: marker.description || '',
-      icon_style: marker.icon_style || 'background:#d7b56d;border:2px solid #3a2b1f;',
+      icon_style: iconStyle,
+      icon_url: marker.icon_url || '',
       chat_url: marker.chat_url || ''
     });
+    readStyleControls(iconStyle);
   },
   { immediate: true, deep: true }
 );
+
+watch(styleControls, writeIconStyle, { deep: true });
 
 watch(
   () => props.position,
@@ -99,6 +128,15 @@ onBeforeUnmount(() => {
 function save() {
   emit('save', { ...form });
 }
+
+function selectMarkerIcon(icon) {
+  form.icon_url = icon.url;
+}
+
+function clearMarkerIcon() {
+  form.icon_url = '';
+  writeIconStyle();
+}
 </script>
 
 <template>
@@ -123,10 +161,38 @@ function save() {
       <input v-model="form.chat_url" />
     </label>
 
-    <label>
-      {{ t('marker.iconStyle') }}
-      <textarea v-model="form.icon_style" rows="2"></textarea>
-    </label>
+    <div class="marker-icon-picker">
+      <button
+        v-for="icon in markerIcons"
+        :key="icon.id"
+        type="button"
+        class="marker-icon-choice"
+        :class="{ active: form.icon_url === icon.url }"
+        @click="selectMarkerIcon(icon)"
+      >
+        <img :src="icon.url" :alt="icon.name" />
+      </button>
+      <button
+        type="button"
+        class="marker-icon-choice"
+        :class="{ active: usesStyleIcon }"
+        :title="t('marker.useStyleIcon')"
+        @click="clearMarkerIcon"
+      >
+        <span class="custom-magic-marker" :style="styleIconPreview"></span>
+      </button>
+    </div>
+
+    <div v-if="usesStyleIcon" class="marker-style-controls">
+      <label>
+        {{ t('marker.styleColor') }}
+        <input v-model="styleControls.color" type="color" />
+      </label>
+      <label>
+        {{ t('marker.styleSize') }}
+        <input v-model.number="styleControls.size" type="range" min="12" max="48" />
+      </label>
+    </div>
 
     <div class="coord-readout">X: {{ Number(form.lng).toFixed(2) }} / Y: {{ Number(form.lat).toFixed(2) }}</div>
 

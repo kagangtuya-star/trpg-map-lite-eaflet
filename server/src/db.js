@@ -27,9 +27,19 @@ export function applySchema(db) {
       title TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       icon_style TEXT NOT NULL,
+      icon_url TEXT NOT NULL DEFAULT '',
       chat_url TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS campaign_marker_icons (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      url TEXT NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
     );
   `);
@@ -38,6 +48,10 @@ export function applySchema(db) {
   const hasDescription = markerColumns.some((column) => column.name === 'description');
   if (!hasDescription) {
     db.exec("ALTER TABLE markers ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  }
+  const hasIconUrl = markerColumns.some((column) => column.name === 'icon_url');
+  if (!hasIconUrl) {
+    db.exec("ALTER TABLE markers ADD COLUMN icon_url TEXT NOT NULL DEFAULT ''");
   }
 }
 

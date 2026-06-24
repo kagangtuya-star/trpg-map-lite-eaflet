@@ -55,7 +55,7 @@ export function markerTooltipHtml(marker) {
 
 export function iconHtml(markerUrl, iconStyle) {
   if (markerUrl) {
-    return `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(markerUrl)}" alt="" />`;
+    return `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(markerUrl)}" alt="" draggable="false" />`;
   }
   return `<div class="custom-magic-marker" style="${escapeAttribute(iconStyle)}"></div>`;
 }

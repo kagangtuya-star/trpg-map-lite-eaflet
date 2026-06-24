@@ -16,6 +16,10 @@ body {
   box-shadow: 0 0 0 3px rgba(215, 181, 109, 0.2), 0 0 18px rgba(215, 181, 109, 0.9);
 }
 
+.magic-marker-shell .custom-magic-marker {
+  pointer-events: none;
+}
+
 .custom-magic-marker--image {
   display: block;
   width: 32px;

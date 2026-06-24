@@ -14,7 +14,7 @@ const props = defineProps({
   activeTool: { type: String, default: 'select' }
 });
 
-const emit = defineEmits(['map-click', 'marker-click', 'marker-drag-end']);
+const emit = defineEmits(['map-click', 'marker-click', 'marker-drag-start', 'marker-drag-end']);
 
 let map;
 let markerLayer;
@@ -204,7 +204,7 @@ function renderMarkers() {
       draggable: props.mode === 'edit' && props.activeTool === 'select',
       icon: L.divIcon({
         className: 'magic-marker-shell',
-        html: iconHtml(props.campaign.default_cursor_url, item.icon_style),
+        html: iconHtml(item.icon_url, item.icon_style),
         iconSize: [32, 32],
         iconAnchor: [12, 12]
       })
@@ -224,6 +224,9 @@ function renderMarkers() {
         return;
       }
       if (item.chat_url) window.open(item.chat_url, '_blank');
+    });
+    marker.on('dragstart', () => {
+      emit('marker-drag-start', { marker: item });
     });
     marker.on('dragend', () => {
       lastMarkerDragAt = Date.now();

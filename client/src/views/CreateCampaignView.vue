@@ -3,6 +3,7 @@ import { computed, defineComponent, h, onBeforeUnmount, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { apiClient } from '../lib/api-client.js';
+import { prepareCursorUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 import { buildCampaignFormData } from '../lib/map-utils.js';
 
@@ -118,7 +119,8 @@ async function uploadCursor(event, target) {
   uploadingCursor.value = target;
   error.value = '';
   try {
-    const result = await apiClient.uploadCursor(selectedFile);
+    const uploadFile = await prepareCursorUpload(selectedFile);
+    const result = await apiClient.uploadCursor(uploadFile);
     if (target === 'default') defaultCursorUrl.value = result.url;
     else pointerCursorUrl.value = result.url;
   } catch (cause) {
@@ -215,26 +217,14 @@ onBeforeUnmount(revokeMapPreview);
         <input ref="mapInput" class="sr-only-file" type="file" accept="image/*" tabindex="-1" @change="onFileChange" />
       </div>
       <label class="field-block">
-        {{ t('create.defaultCursorUrl') }}
-        <span class="file-url-row">
-          <input v-model="defaultCursorUrl" />
-          <span class="upload-button icon-upload-button" :title="t('create.uploadCursor')">
-            <UploadCloudIcon />
-            <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'default')" />
-          </span>
-        </span>
-        <img v-if="defaultCursorUrl" class="asset-preview asset-preview--marker" :src="defaultCursorUrl" alt="" />
-      </label>
-      <label class="field-block">
         {{ t('create.pointerCursorUrl') }}
-        <span class="file-url-row">
-          <input v-model="pointerCursorUrl" />
+        <span class="asset-picker-row">
+          <img v-if="pointerCursorUrl" class="asset-preview asset-preview--cursor" :src="pointerCursorUrl" alt="" />
           <span class="upload-button icon-upload-button" :title="t('create.uploadCursor')">
             <UploadCloudIcon />
-            <input type="file" accept="image/*,.cur,.ico" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'pointer')" />
+            <input type="file" accept="image/*,.cur,.ico,.svg" :disabled="Boolean(uploadingCursor)" @change="uploadCursor($event, 'pointer')" />
           </span>
         </span>
-        <img v-if="pointerCursorUrl" class="asset-preview asset-preview--cursor" :src="pointerCursorUrl" alt="" />
       </label>
       <label class="field-block">
         {{ t('create.maxZoom') }}

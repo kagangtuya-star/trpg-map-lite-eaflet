@@ -5,12 +5,14 @@ export const PUBLIC_DIR = path.resolve(process.cwd(), 'public');
 export const TILES_DIR = path.join(PUBLIC_DIR, 'tiles');
 export const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads');
 export const CURSORS_DIR = path.join(UPLOADS_DIR, 'cursors');
+export const MARKER_ICONS_DIR = path.join(UPLOADS_DIR, 'marker-icons');
 export const TILE_EXTENSION = 'png';
 
 export async function ensureRuntimeDirs() {
   await fs.mkdir(TILES_DIR, { recursive: true });
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
   await fs.mkdir(CURSORS_DIR, { recursive: true });
+  await fs.mkdir(MARKER_ICONS_DIR, { recursive: true });
 }
 
 export async function generateTiles({ filePath, campaignId, tileSize = 256, sharpFactory } = {}) {

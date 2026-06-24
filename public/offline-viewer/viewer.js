@@ -107,8 +107,8 @@ const TRANSPARENT_TILE =
     const marker = L.marker([item.lat, item.lng], {
       icon: L.divIcon({
         className: 'magic-marker-shell',
-        html: campaign.default_cursor_url
-          ? `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(campaign.default_cursor_url)}" alt="" />`
+        html: item.icon_url
+          ? `<img class="custom-magic-marker custom-magic-marker--image" src="${escapeAttribute(item.icon_url)}" alt="" draggable="false" />`
           : `<div class="custom-magic-marker" style="${escapeAttribute(item.icon_style)}"></div>`,
         iconSize: [32, 32],
         iconAnchor: [12, 12]

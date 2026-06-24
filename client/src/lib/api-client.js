@@ -28,6 +28,21 @@ export const apiClient = {
     return request('/api/uploads/cursors', { method: 'POST', body: formData });
   },
 
+  uploadMarkerIcon(editToken, file) {
+    const formData = new FormData();
+    formData.set('icon', file);
+    return request(buildApiPath('/api/campaigns/:edit_token/marker-icons', { edit_token: editToken }), {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  deleteMarkerIcon(editToken, iconId) {
+    return request(buildApiPath('/api/campaigns/:edit_token/marker-icons/:id', { edit_token: editToken, id: iconId }), {
+      method: 'DELETE'
+    });
+  },
+
   updateConfig(editToken, payload) {
     return request(buildApiPath('/api/campaigns/:edit_token/config', { edit_token: editToken }), {
       method: 'PUT',

@@ -17,6 +17,7 @@ export function buildExportConfig(result, campaignPatch = {}) {
       title: marker.title,
       description: marker.description || '',
       icon_style: marker.icon_style,
+      icon_url: marker.icon_url || '',
       chat_url: marker.chat_url
     }))
   };
