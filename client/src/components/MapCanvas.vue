@@ -22,6 +22,7 @@ let coordControl;
 let mapContainer;
 let resizeObserver;
 let lastMarkerDragAt = 0;
+let markerRecords = new Map();
 
 const cursorState = reactive({
   visible: false,
@@ -193,50 +194,138 @@ function updatePlacementCursor() {
   if (!container) return;
   if (props.mode === 'edit' && props.activeTool === 'marker') {
     container.style.setProperty('cursor', 'crosshair', 'important');
+  } else {
+    container.style.removeProperty('cursor');
   }
 }
 
-function renderMarkers() {
+function canDragMarkers() {
+  return props.mode === 'edit' && props.activeTool === 'select';
+}
+
+function markerStateSignature() {
+  return props.markers
+    .map((item) =>
+      [
+        item.id,
+        item.lat,
+        item.lng,
+        item.title,
+        item.description || '',
+        item.icon_url || '',
+        item.icon_style || '',
+        item.chat_url || ''
+      ].join(':')
+    )
+    .join('|');
+}
+
+function markerVisualSignature(item) {
+  return [item.title, item.description || '', item.icon_url || '', item.icon_style || '', item.chat_url || ''].join(':');
+}
+
+function buildMarkerIcon(item) {
+  return L.divIcon({
+    className: 'magic-marker-shell',
+    html: iconHtml(item.icon_url, item.icon_style),
+    iconSize: [32, 32],
+    iconAnchor: [12, 12]
+  });
+}
+
+function setMarkerDragging(marker, draggable) {
+  if (!marker.dragging) return;
+  if (draggable) marker.dragging.enable();
+  else marker.dragging.disable();
+}
+
+function createMarkerRecord(item) {
+  const record = {
+    marker: undefined,
+    item,
+    visualSignature: markerVisualSignature(item),
+    draggable: canDragMarkers(),
+    dragging: false
+  };
+  const marker = L.marker([item.lat, item.lng], {
+    draggable: record.draggable,
+    interactive: true,
+    icon: buildMarkerIcon(item)
+  }).addTo(markerLayer);
+  record.marker = marker;
+  marker.bindTooltip(markerTooltipHtml(item), {
+    permanent: true,
+    direction: 'right',
+    className: 'magic-tooltip'
+  });
+  marker.on('click', (event) => {
+    if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+    if (Date.now() - lastMarkerDragAt < 250) {
+      return;
+    }
+    if (props.mode === 'edit') {
+      emitMarkerClick(record.item);
+      return;
+    }
+    if (record.item.chat_url) window.open(record.item.chat_url, '_blank');
+  });
+  marker.on('dragstart', () => {
+    record.dragging = true;
+    emit('marker-drag-start', { marker: record.item });
+  });
+  marker.on('dragend', () => {
+    record.dragging = false;
+    lastMarkerDragAt = Date.now();
+    emitMarkerDragEnd(record.item, marker.getLatLng());
+  });
+  return record;
+}
+
+function syncMarkerRecord(record, item) {
+  record.item = item;
+  const nextVisualSignature = markerVisualSignature(item);
+  if (nextVisualSignature !== record.visualSignature) {
+    record.marker.setIcon(buildMarkerIcon(item));
+    record.marker.setTooltipContent(markerTooltipHtml(item));
+    record.visualSignature = nextVisualSignature;
+  }
+
+  const nextDraggable = canDragMarkers();
+  if (nextDraggable !== record.draggable) {
+    setMarkerDragging(record.marker, nextDraggable);
+    record.draggable = nextDraggable;
+  }
+
+  if (!record.dragging) {
+    const latLng = record.marker.getLatLng();
+    if (latLng.lat !== item.lat || latLng.lng !== item.lng) {
+      record.marker.setLatLng([item.lat, item.lng]);
+    }
+  }
+}
+
+function syncMarkers() {
   if (!markerLayer) return;
-  markerLayer.clearLayers();
+  const nextIds = new Set(props.markers.map((item) => item.id));
+  markerRecords.forEach((record, id) => {
+    if (!nextIds.has(id)) {
+      markerLayer.removeLayer(record.marker);
+      markerRecords.delete(id);
+    }
+  });
+
   props.markers.forEach((item) => {
-    const marker = L.marker([item.lat, item.lng], {
-      draggable: props.mode === 'edit' && props.activeTool === 'select',
-      icon: L.divIcon({
-        className: 'magic-marker-shell',
-        html: iconHtml(item.icon_url, item.icon_style),
-        iconSize: [32, 32],
-        iconAnchor: [12, 12]
-      })
-    }).addTo(markerLayer);
-    marker.bindTooltip(markerTooltipHtml(item), {
-      permanent: true,
-      direction: 'right',
-      className: 'magic-tooltip'
-    });
-    marker.on('click', (event) => {
-      if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
-      if (Date.now() - lastMarkerDragAt < 250) {
-        return;
-      }
-      if (props.mode === 'edit') {
-        emitMarkerClick(item);
-        return;
-      }
-      if (item.chat_url) window.open(item.chat_url, '_blank');
-    });
-    marker.on('dragstart', () => {
-      emit('marker-drag-start', { marker: item });
-    });
-    marker.on('dragend', () => {
-      lastMarkerDragAt = Date.now();
-      emitMarkerDragEnd(item, marker.getLatLng());
-    });
+    const existing = markerRecords.get(item.id);
+    if (existing) {
+      syncMarkerRecord(existing, item);
+      return;
+    }
+    markerRecords.set(item.id, createMarkerRecord(item));
   });
 }
 
 watch(
-  () => [props.campaign, props.markers, props.mode],
+  () => [props.campaign, props.mode, props.activeTool, markerStateSignature()],
   async () => {
     await nextTick();
     initMap();
@@ -245,19 +334,9 @@ watch(
     if (cursorState.visible) {
       cursorState.url = props.campaign.pointer_cursor_url;
     }
-    renderMarkers();
+    syncMarkers();
   },
-  { immediate: true, deep: true }
-);
-
-watch(
-  () => props.activeTool,
-  () => {
-    applyDynamicCursors(props.campaign);
-    updatePlacementCursor();
-    hideCustomCursor();
-    renderMarkers();
-  }
+  { immediate: true }
 );
 
 onBeforeUnmount(() => {

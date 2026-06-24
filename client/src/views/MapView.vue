@@ -115,6 +115,14 @@ function removeSavedMarkerIcon(iconId) {
   };
 }
 
+function removeSavedMarker(markerId) {
+  if (!payload.value) return;
+  payload.value = {
+    ...payload.value,
+    markers: (payload.value.markers || []).filter((marker) => marker.id !== markerId)
+  };
+}
+
 async function saveMarker(marker) {
   const result = await apiClient.saveMarker(token.value, marker);
   applySavedMarker(result.marker);
@@ -152,7 +160,7 @@ async function replaceMarkerIcon({ marker, iconUrl }) {
 async function deleteMarker(id) {
   await apiClient.deleteMarker(token.value, id);
   closeMarkerPopover();
-  await loadCampaign();
+  removeSavedMarker(id);
 }
 </script>
 
@@ -173,6 +181,7 @@ async function deleteMarker(id) {
         @config-preview="updateConfigPreview"
         @marker-icon-created="applySavedMarkerIcon"
         @marker-icon-deleted="removeSavedMarkerIcon"
+        @marker-deleted="removeSavedMarker"
         @replace-marker-icon="replaceMarkerIcon"
       />
       <section class="map-workspace">

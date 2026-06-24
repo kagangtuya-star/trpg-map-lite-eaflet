@@ -20,6 +20,7 @@ const emit = defineEmits([
   'config-saved',
   'marker-icon-created',
   'marker-icon-deleted',
+  'marker-deleted',
   'replace-marker-icon'
 ]);
 
@@ -210,7 +211,7 @@ async function replaceMarkerIcon(event, marker) {
 
 async function deleteMarker(id) {
   await apiClient.deleteMarker(props.token, id);
-  emit('refresh');
+  emit('marker-deleted', id);
 }
 
 function toggleSection(section) {
