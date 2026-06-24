@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "node --watch server/src/server.js",
+    "dev:server": "node --watch-path=server/src server/src/server.js",
     "dev:client": "vite --host 0.0.0.0",
     "start": "node server/src/server.js",
     "test": "npm run test:server && npm run test:client",
