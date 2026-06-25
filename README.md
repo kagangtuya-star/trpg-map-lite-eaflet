@@ -59,12 +59,18 @@ npm run build
 
 ## Docker 部署
 
-本项目提供 `Dockerfile`、`docker-compose.yml` 和手动触发的 GitHub Actions 镜像发布流程。
+本项目提供 `Dockerfile`、`docker-compose.yml`、`docker-compose.ghcr.yml` 和手动触发的 GitHub Actions 镜像发布流程。
 
 本地运行：
 
 ```bash
 docker compose up --build -d
+```
+
+直接拉 GHCR 镜像：
+
+```bash
+TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag> docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 - 应用默认端口：`http://localhost:3000`

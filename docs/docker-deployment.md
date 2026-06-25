@@ -19,6 +19,23 @@ docker compose up --build -d
 docker compose down
 ```
 
+## 直接拉 GHCR 镜像
+
+`docker-compose.ghcr.yml` 用于不本地构建，直接拉 GHCR 镜像。
+
+先指定镜像地址：
+
+```bash
+export TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag>
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+也可以写进同目录 `.env`：
+
+```env
+TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag>
+```
+
 ## 持久化目录
 
 `docker-compose.yml` 默认挂载：
