@@ -1039,11 +1039,26 @@ button.ghost {
 }
 
 .magic-tooltip {
+  width: max-content;
+  max-width: clamp(180px, 32vw, 360px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: rgba(39, 39, 42, 0.92);
   color: #fff;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34);
+}
+
+.magic-tooltip b {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.magic-tooltip br {
+  display: none;
 }
 
 .leaflet-container {
