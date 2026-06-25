@@ -1,10 +1,13 @@
-# trpg-map-lite-eaflet
+# trpg-map-lite-leaflet TRPG 瓦片交互地图
 
-TRPG 魔法学院交互地图原型。后端提供地图上传、瓦片生成、双 token、标点、ZIP 导出；前端提供 Vue + Leaflet 地图编辑/查看界面。
+<img width="1723" height="913" alt="image" src="https://github.com/user-attachments/assets/3a3d0d7b-0061-4088-ace5-aa2303c43439" />
+<img width="1695" height="928" alt="image" src="https://github.com/user-attachments/assets/23f8f49f-3a25-4947-a6ee-2f4310334e9c" />
+
+TRPG 瓦片交互地图。
 
 ## 安装
 
-本仓不自动安装依赖。首次运行前手动执行：
+首次运行前手动执行：
 
 ```bash
 npm install
