@@ -330,18 +330,6 @@ button.ghost {
   font-size: 12px;
 }
 
-.map-locale-toggle {
-  position: absolute;
-  z-index: 500;
-  right: 14px;
-  top: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  color: #fff;
-}
-
 .map-workspace {
   position: relative;
   min-width: 0;

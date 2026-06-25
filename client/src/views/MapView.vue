@@ -8,7 +8,7 @@ import MarkerLayerPanel from '../components/MarkerLayerPanel.vue';
 import MarkerPopover from '../components/MarkerPopover.vue';
 import { apiClient } from '../lib/api-client.js';
 import { prepareMarkerIconUpload } from '../lib/image-compress.js';
-import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
+import { t } from '../lib/i18n.js';
 import { buildMapTitle, setDocumentTitle } from '../lib/page-title.js';
 
 const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;';
@@ -313,15 +313,6 @@ async function handleArchiveImported(result) {
             @replace-marker-icon="uploadReplacementMarkerIcon"
           />
         </div>
-        <button
-          v-if="payload.mode === 'view'"
-          type="button"
-          class="ghost locale-toggle map-locale-toggle"
-          :title="t('locale.switchTo')"
-          @click="toggleLocale"
-        >
-          {{ localeLabel }} / {{ localeToggleLabel }}
-        </button>
         <MapCanvas
           :key="mapReloadKey"
           ref="mapCanvasRef"
