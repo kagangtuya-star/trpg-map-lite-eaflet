@@ -57,6 +57,22 @@ npm run test
 npm run build
 ```
 
+## Docker 部署
+
+本项目提供 `Dockerfile`、`docker-compose.yml` 和手动触发的 GitHub Actions 镜像发布流程。
+
+本地运行：
+
+```bash
+docker compose up --build -d
+```
+
+- 应用默认端口：`http://localhost:3000`
+- 健康检查：`http://localhost:3000/api/health`
+- 运行数据默认保存到 `./data`
+
+更多部署、备份、GHCR 发布说明见 [Docker 部署文档](docs/docker-deployment.md)。
+
 ## 使用
 
 1. 调用 `POST /api/campaigns` 上传地图文件字段 `map`，可附带 `name`、`default_cursor_url`、`pointer_cursor_url`、`max_zoom`。

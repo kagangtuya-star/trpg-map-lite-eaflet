@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+dist
+coverage
+npm-debug.log*
+data
+public/tiles
+public/uploads
+.env
+.env.*
+Dockerfile
+docker-compose*.yml

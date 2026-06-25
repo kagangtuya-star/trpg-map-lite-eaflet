@@ -81,7 +81,8 @@ export function createApp({
   cursorUpload,
   markerIconUpload,
   tileGenerator = generateTiles,
-  archiveFactory = archiver
+  archiveFactory = archiver,
+  clientDistDir
 } = {}) {
   const app = express();
   const activeStore = store;
@@ -92,6 +93,9 @@ export function createApp({
 
   app.use(express.json());
   app.use(express.static(PUBLIC_DIR));
+  if (clientDistDir) {
+    app.use(express.static(clientDistDir));
+  }
 
   app.get('/tiles/:campaignId/:z/:y/:x.png', (req, res, next) => {
     const fallbackTile = path.join(TILES_DIR, req.params.campaignId, 'blank.png');
@@ -279,6 +283,16 @@ export function createApp({
     }
   });
 
+  if (clientDistDir) {
+    app.use((req, res, next) => {
+      if (!['GET', 'HEAD'].includes(req.method) || /^\/(api|tiles|uploads)(\/|$)/.test(req.path)) {
+        next();
+        return;
+      }
+      res.sendFile(path.join(clientDistDir, 'index.html'));
+    });
+  }
+
   app.use((error, _req, res, _next) => {
     res.status(error.status || 500).json({ error: error.message || 'Internal server error' });
   });
@@ -288,5 +302,6 @@ export function createApp({
 
 export async function createProductionApp(db) {
   await ensureRuntimeDirs();
-  return createApp({ store: createSqliteStore(db) });
+  const clientDistDir = path.resolve(process.cwd(), 'dist/client');
+  return createApp({ store: createSqliteStore(db), clientDistDir });
 }
