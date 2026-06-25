@@ -1,11 +1,12 @@
 <script setup>
-import { computed, defineComponent, h, onBeforeUnmount, ref } from 'vue';
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { apiClient } from '../lib/api-client.js';
 import { prepareCursorUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
 import { buildCampaignFormData } from '../lib/map-utils.js';
+import { buildHomeTitle, setDocumentTitle } from '../lib/page-title.js';
 
 const file = ref(null);
 const name = ref('Arcane Academy');
@@ -177,6 +178,9 @@ async function copyShareLink() {
 }
 
 onBeforeUnmount(revokeMapPreview);
+onMounted(() => {
+  setDocumentTitle(buildHomeTitle());
+});
 </script>
 
 <template>

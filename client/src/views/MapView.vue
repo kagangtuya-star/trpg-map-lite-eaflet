@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import EditorPanel from '../components/EditorPanel.vue';
@@ -9,6 +9,7 @@ import MarkerPopover from '../components/MarkerPopover.vue';
 import { apiClient } from '../lib/api-client.js';
 import { prepareMarkerIconUpload } from '../lib/image-compress.js';
 import { localeLabel, localeToggleLabel, t, toggleLocale } from '../lib/i18n.js';
+import { buildMapTitle, setDocumentTitle } from '../lib/page-title.js';
 
 const DEFAULT_MARKER_ICON_STYLE = 'width:18px;height:18px;background:#d7b56d;border:2px solid #3a2b1f;';
 
@@ -29,6 +30,9 @@ const mapReloadKey = ref(0);
 const previewCampaign = computed(() =>
   payload.value?.campaign ? { ...payload.value.campaign, ...(configPreview.value || {}) } : null
 );
+const previewPayload = computed(() =>
+  payload.value ? { ...payload.value, campaign: previewCampaign.value || payload.value.campaign } : null
+);
 
 async function loadCampaign() {
   loading.value = true;
@@ -44,6 +48,15 @@ async function loadCampaign() {
 }
 
 onMounted(loadCampaign);
+
+watch(
+  previewPayload,
+  (nextPayload) => {
+    if (!nextPayload) return;
+    setDocumentTitle(buildMapTitle(nextPayload, t('campaign.untitled')));
+  },
+  { immediate: true }
+);
 
 function createDraftMarker(event) {
   const campaign = previewCampaign.value || payload.value?.campaign || {};
