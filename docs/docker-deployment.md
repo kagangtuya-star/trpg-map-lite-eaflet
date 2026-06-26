@@ -23,17 +23,29 @@ docker compose down
 
 `docker-compose.ghcr.yml` 用于不本地构建，直接拉 GHCR 镜像。
 
-先指定镜像地址：
+默认拉取：
 
 ```bash
-export TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag>
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-也可以写进同目录 `.env`：
+默认镜像：
+
+```text
+ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:latest
+```
+
+也可以指定其它标签：
+
+```bash
+export TRPG_MAP_IMAGE=ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag>
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+或写进同目录 `.env`：
 
 ```env
-TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag>
+TRPG_MAP_IMAGE=ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag>
 ```
 
 ## 持久化目录
@@ -72,18 +84,18 @@ docker run --rm -p 3000:3000 \
 发布后镜像名：
 
 ```text
-ghcr.io/<owner>/<repo>:<tag>
+ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag>
 ```
 
 拉取运行：
 
 ```bash
 docker login ghcr.io
-docker pull ghcr.io/<owner>/<repo>:<tag>
+docker pull ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag>
 docker run -d --name trpg-map-lite-leaflet \
   -p 3000:3000 \
   -v "$PWD/data:/app/data" \
   -v "$PWD/data/uploads:/app/public/uploads" \
   -v "$PWD/data/tiles:/app/public/tiles" \
-  ghcr.io/<owner>/<repo>:<tag>
+  ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag>
 ```

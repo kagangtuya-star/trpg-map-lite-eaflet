@@ -70,7 +70,13 @@ docker compose up --build -d
 直接拉 GHCR 镜像：
 
 ```bash
-TRPG_MAP_IMAGE=ghcr.io/<owner>/<repo>:<tag> docker compose -f docker-compose.ghcr.yml up -d
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+指定其它镜像标签：
+
+```bash
+TRPG_MAP_IMAGE=ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:<tag> docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 - 应用默认端口：`http://localhost:3000`

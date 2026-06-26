@@ -1,6 +1,6 @@
 services:
   trpg-map:
-    image: ${TRPG_MAP_IMAGE:-ghcr.io/OWNER/REPO:latest}
+    image: ${TRPG_MAP_IMAGE:-ghcr.io/kagangtuya-star/trpg-map-lite-eaflet:latest}
     container_name: trpg-map-lite-leaflet
     restart: unless-stopped
     ports:
