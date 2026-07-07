@@ -35,31 +35,50 @@ export async function getGeneratedMaxZoom(outputDir) {
   return Math.max(...levels);
 }
 
-export async function getGeneratedTileBounds(outputDir, tileSize = 256) {
+async function defaultReadTileMetadata(tilePath) {
+  const sharp = (await import('sharp')).default;
+  return sharp(tilePath).metadata();
+}
+
+export async function getGeneratedTileBounds(outputDir, tileSize = 256, readTileMetadata = defaultReadTileMetadata) {
   const maxZoom = await getGeneratedMaxZoom(outputDir);
   const zoomDir = path.join(outputDir, String(maxZoom));
   const rowEntries = await fs.readdir(zoomDir, { withFileTypes: true });
   let maxRow = 0;
   let maxColumn = 0;
+  let maxRowTilePath;
+  let maxColumnTilePath;
 
   for (const rowEntry of rowEntries) {
     if (!rowEntry.isDirectory() || !/^\d+$/.test(rowEntry.name)) continue;
     const row = Number(rowEntry.name);
-    maxRow = Math.max(maxRow, row);
+    const isNewMaxRow = row >= maxRow;
+    if (isNewMaxRow) maxRow = row;
     const rowDir = path.join(zoomDir, rowEntry.name);
     const tileEntries = await fs.readdir(rowDir, { withFileTypes: true });
     tileEntries.forEach((tileEntry) => {
       const match = tileEntry.isFile() ? tileEntry.name.match(/^(\d+)\.png$/) : null;
-      if (match) maxColumn = Math.max(maxColumn, Number(match[1]));
+      if (!match) return;
+      const column = Number(match[1]);
+      const tilePath = path.join(rowDir, tileEntry.name);
+      if (isNewMaxRow) maxRowTilePath = tilePath;
+      if (column > maxColumn || !maxColumnTilePath) {
+        maxColumn = Math.max(maxColumn, column);
+        maxColumnTilePath = tilePath;
+      }
     });
   }
 
+  const [{ width: edgeWidth = tileSize }, { height: edgeHeight = tileSize }] = await Promise.all([
+    readTileMetadata(maxColumnTilePath),
+    readTileMetadata(maxRowTilePath)
+  ]);
   const scale = 2 ** maxZoom;
   return {
     max_zoom: maxZoom,
-    south: -((maxRow + 1) * tileSize) / scale,
+    south: -((maxRow * tileSize + edgeHeight) / scale),
     west: 0,
     north: 0,
-    east: ((maxColumn + 1) * tileSize) / scale
+    east: ((maxColumn * tileSize + edgeWidth) / scale)
   };
 }

@@ -26,6 +26,11 @@ describe('MapCanvas source contract', () => {
     expect(source).toContain('map.invalidateSize');
   });
 
+  it('fits full campaign bounds in view mode instead of pinning native zoom', () => {
+    expect(source).toContain("props.mode === 'view'");
+    expect(source).toContain('map.fitBounds(bounds');
+  });
+
   it('emits marker drag updates for draggable markers in select mode', () => {
     expect(source).toContain("'marker-drag-end'");
     expect(source).toContain("'marker-drag-start'");

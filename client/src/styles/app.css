@@ -338,15 +338,14 @@ button.ghost {
 }
 
 .app-shell.view-only .map-workspace {
-  align-content: start;
-  justify-items: center;
+  align-content: stretch;
+  justify-items: stretch;
   background: transparent;
 }
 
 .app-shell.view-only .map-canvas {
-  height: auto;
-  max-height: 100%;
-  aspect-ratio: var(--map-aspect-ratio);
+  height: 100%;
+  max-height: none;
 }
 
 .map-control-stack {

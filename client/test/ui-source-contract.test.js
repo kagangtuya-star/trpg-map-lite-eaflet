@@ -103,12 +103,15 @@ describe('UI source contracts', () => {
     expect(stylesSource).toContain('background: #27272a');
   });
 
-  it('sizes view-only embedded maps by campaign aspect ratio', () => {
+  it('keeps view-only maps stretched to viewport for fitBounds-based viewing', () => {
     expect(stylesSource).toContain('body:has(.app-shell.view-only)');
     expect(stylesSource).toContain('.app-shell.view-only .map-workspace');
     expect(stylesSource).toContain('.app-shell.view-only .map-canvas');
+    expect(stylesSource).toContain('justify-items: stretch');
+    expect(stylesSource).toContain('height: 100%');
+    expect(stylesSource).toContain('max-height: none');
     expect(stylesSource).toContain('background: transparent');
-    expect(stylesSource).toContain('aspect-ratio: var(--map-aspect-ratio)');
+    expect(stylesSource).not.toContain('.app-shell.view-only .map-canvas {\n  height: auto;');
   });
 
   it('renders marker management as a floating layer panel instead of only an accordion list', () => {

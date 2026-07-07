@@ -72,18 +72,50 @@ function mapAspectRatio() {
   return `${width} / ${height}`;
 }
 
-function minFillZoom() {
+function minimumScale() {
   const bounds = props.campaign.tile_bounds;
-  if (!bounds || !map) return 0;
+  if (!bounds || !map) return 1;
   const size = map.getSize();
   const width = Math.max(1, bounds.east - bounds.west);
   const height = Math.max(1, bounds.north - bounds.south);
-  const requiredScale = Math.max(size.x / width, size.y / height);
-  return Math.min(overzoomMax(), Math.max(0, Math.ceil(Math.log2(requiredScale))));
+  if (props.mode === 'view') {
+    return Math.min(size.x / width, size.y / height);
+  }
+  return Math.max(size.x / width, size.y / height);
+}
+
+function minimumZoom() {
+  const scale = minimumScale();
+  if (!Number.isFinite(scale) || scale <= 0) return 0;
+  const zoom = props.mode === 'view' ? Math.floor(Math.log2(scale)) : Math.ceil(Math.log2(scale));
+  return Math.min(overzoomMax(), zoom);
+}
+
+function logViewDebug(stage, extra = {}) {
+  if (props.mode !== 'view') return;
+  const bounds = props.campaign.tile_bounds;
+  const size = map?.getSize?.();
+  const center = map?.getCenter?.();
+  console.log('[MapCanvas:view]', {
+    stage,
+    campaignId: props.campaign.id,
+    bounds,
+    container: size ? { width: size.x, height: size.y } : null,
+    minZoom: map?.getMinZoom?.(),
+    zoom: map?.getZoom?.(),
+    center: center ? { lat: center.lat, lng: center.lng } : null,
+    ...extra
+  });
+}
+
+function fitCampaignBounds(bounds = campaignBounds()) {
+  if (!map || !bounds || props.mode !== 'view') return;
+  map.fitBounds(bounds, { animate: false, padding: [0, 0] });
+  logViewDebug('fitCampaignBounds');
 }
 
 function applyZoomRange() {
-  const minZoom = minFillZoom();
+  const minZoom = minimumZoom();
   map.setMinZoom(minZoom);
   map.setMaxZoom(overzoomMax());
   if (map.getZoom() < minZoom || map.getZoom() > overzoomMax()) {
@@ -95,6 +127,8 @@ function resizeMapToContainer() {
   if (!map) return;
   map.invalidateSize({ animate: false });
   applyZoomRange();
+  fitCampaignBounds();
+  logViewDebug('resizeMapToContainer');
 }
 
 function refreshSize() {
@@ -131,10 +165,17 @@ function initMap() {
     attribution: ''
   }).addTo(map);
 
-  if (center) map.setView(center, nativeZoom);
-  else map.setView([0, 0], 0);
   applyZoomRange();
-  map.on('resize', applyZoomRange);
+  if (props.mode === 'view' && bounds) {
+    map.fitBounds(bounds, { animate: false, padding: [0, 0] });
+    logViewDebug('initMap:view-fit');
+  } else if (center) map.setView(center, nativeZoom);
+  else map.setView([0, 0], 0);
+  map.on('resize', () => {
+    applyZoomRange();
+    fitCampaignBounds();
+    logViewDebug('leaflet-resize');
+  });
   map.on('zoom', syncMarkerScales);
   map.on('zoomend', syncMarkerScales);
 

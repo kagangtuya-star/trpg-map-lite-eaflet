@@ -392,11 +392,36 @@ test('getGeneratedTileBounds returns CRS simple bounds from highest tile grid', 
   await fs.writeFile(path.join(root, '3', '0', '0.png'), '');
   await fs.writeFile(path.join(root, '3', '4', '7.png'), '');
 
-  assert.deepEqual(await getGeneratedTileBounds(root), {
+  assert.deepEqual(
+    await getGeneratedTileBounds(root, 256, async () => ({
+      width: 256,
+      height: 256
+    })),
+    {
+      max_zoom: 3,
+      south: -160,
+      west: 0,
+      north: 0,
+      east: 256
+    }
+  );
+});
+
+test('getGeneratedTileBounds uses cropped edge tile dimensions for non-square source images', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'trpg-map-bounds-cropped-'));
+  await fs.mkdir(path.join(root, '3', '0'), { recursive: true });
+  await fs.mkdir(path.join(root, '3', '4'), { recursive: true });
+  await fs.writeFile(path.join(root, '3', '0', '0.png'), '');
+  await fs.writeFile(path.join(root, '3', '4', '7.png'), '');
+
+  assert.deepEqual(await getGeneratedTileBounds(root, 256, async (tilePath) => ({
+    width: tilePath.endsWith(path.join('4', '7.png')) ? 64 : 256,
+    height: tilePath.endsWith(path.join('4', '7.png')) ? 128 : 256
+  })), {
     max_zoom: 3,
-    south: -160,
+    south: -144,
     west: 0,
     north: 0,
-    east: 256
+    east: 232
   });
 });
