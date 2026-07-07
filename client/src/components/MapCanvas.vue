@@ -84,10 +84,28 @@ function minimumScale() {
   return Math.max(size.x / width, size.y / height);
 }
 
+function viewFitZoom(bounds = campaignBounds()) {
+  if (!map || !bounds || props.mode !== 'view') return 0;
+  return Math.min(overzoomMax(), map.getBoundsZoom(bounds, false, L.point(0, 0)));
+}
+
+function viewFillZoom(bounds = props.campaign.tile_bounds) {
+  if (!bounds || !map || props.mode !== 'view') return 0;
+  const size = map.getSize();
+  const width = Math.max(1, bounds.east - bounds.west);
+  const height = Math.max(1, bounds.north - bounds.south);
+  const scale = Math.max(size.x / width, size.y / height);
+  if (!Number.isFinite(scale) || scale <= 0) return viewFitZoom();
+  return Math.min(overzoomMax(), Math.ceil(Math.log2(scale)));
+}
+
 function minimumZoom() {
+  if (props.mode === 'view') {
+    return viewFitZoom();
+  }
   const scale = minimumScale();
   if (!Number.isFinite(scale) || scale <= 0) return 0;
-  const zoom = props.mode === 'view' ? Math.floor(Math.log2(scale)) : Math.ceil(Math.log2(scale));
+  const zoom = Math.ceil(Math.log2(scale));
   return Math.min(overzoomMax(), zoom);
 }
 
@@ -108,10 +126,11 @@ function logViewDebug(stage, extra = {}) {
   });
 }
 
-function fitCampaignBounds(bounds = campaignBounds()) {
-  if (!map || !bounds || props.mode !== 'view') return;
-  map.fitBounds(bounds, { animate: false, padding: [0, 0] });
-  logViewDebug('fitCampaignBounds');
+function syncViewModeViewport(bounds = campaignBounds(), center = imageCenter()) {
+  if (!map || !bounds || !center || props.mode !== 'view') return;
+  const zoom = viewFillZoom();
+  map.setView(center, zoom, { animate: false });
+  logViewDebug('syncViewModeViewport', { targetZoom: zoom, targetCenter: { lat: center[0], lng: center[1] } });
 }
 
 function applyZoomRange() {
@@ -127,7 +146,7 @@ function resizeMapToContainer() {
   if (!map) return;
   map.invalidateSize({ animate: false });
   applyZoomRange();
-  fitCampaignBounds();
+  syncViewModeViewport();
   logViewDebug('resizeMapToContainer');
 }
 
@@ -166,14 +185,14 @@ function initMap() {
   }).addTo(map);
 
   applyZoomRange();
-  if (props.mode === 'view' && bounds) {
-    map.fitBounds(bounds, { animate: false, padding: [0, 0] });
-    logViewDebug('initMap:view-fit');
+  if (props.mode === 'view' && bounds && center) {
+    syncViewModeViewport(bounds, center);
+    logViewDebug('initMap:view-center-fit');
   } else if (center) map.setView(center, nativeZoom);
   else map.setView([0, 0], 0);
   map.on('resize', () => {
     applyZoomRange();
-    fitCampaignBounds();
+    syncViewModeViewport();
     logViewDebug('leaflet-resize');
   });
   map.on('zoom', syncMarkerScales);
