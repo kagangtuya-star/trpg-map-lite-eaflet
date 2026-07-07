@@ -7,7 +7,7 @@ import {
   buildGoogleTileTemplate,
   formatLatLng,
   iconHtml,
-  markerInteractionSize,
+  markerRenderMetrics,
   markerTooltipHtml
 } from '../lib/map-utils.js';
 
@@ -135,6 +135,8 @@ function initMap() {
   else map.setView([0, 0], 0);
   applyZoomRange();
   map.on('resize', applyZoomRange);
+  map.on('zoom', syncMarkerScales);
+  map.on('zoomend', syncMarkerScales);
 
   markerLayer = L.layerGroup().addTo(map);
   coordControl = L.control({ position: 'bottomright' });
@@ -268,7 +270,11 @@ function markerVisualSignature(item) {
 }
 
 function buildMarkerIcon(item) {
-  const interactionSize = markerInteractionSize(item.icon_style);
+  const { interactionWidth, interactionHeight } = markerRenderMetrics(item.icon_style, {
+    currentZoom: map?.getZoom?.() ?? nativeMaxZoom(),
+    nativeZoom: nativeMaxZoom()
+  });
+  const interactionSize = { width: interactionWidth, height: interactionHeight };
   return L.divIcon({
     className: 'magic-marker-shell',
     html: `<span class="magic-marker-hit-area" aria-hidden="true"></span>${iconHtml(item.icon_url, item.icon_style)}`,
@@ -305,6 +311,27 @@ function showHoverTooltip(record) {
 
 function hideHoverTooltip(record) {
   record.marker.setTooltipContent(markerTooltipHtml(record.item, false));
+}
+
+function markerScale(item) {
+  const { scale } = markerRenderMetrics(item.icon_style, {
+    currentZoom: map?.getZoom?.() ?? nativeMaxZoom(),
+    nativeZoom: nativeMaxZoom()
+  });
+  return scale;
+}
+
+function applyMarkerScale(record) {
+  const element = record.marker.getElement();
+  if (!element) return;
+  const scale = markerScale(record.item);
+  Object.entries({ '--marker-scale': String(scale) }).forEach(([name, value]) => {
+    element.style.setProperty(name, value);
+  });
+}
+
+function syncMarkerScales() {
+  markerRecords.forEach((record) => applyMarkerScale(record));
 }
 
 function pauseMapDraggingForMarkerDrag() {
@@ -360,6 +387,7 @@ function createMarkerRecord(item) {
     icon: buildMarkerIcon(item)
   }).addTo(markerLayer);
   record.marker = marker;
+  marker.on('add', () => applyMarkerScale(record));
   marker.bindTooltip(markerTooltipHtml(item, false), markerTooltipOptions(item));
   marker.on('mouseover', () => showHoverTooltip(record));
   marker.on('mouseout', () => hideHoverTooltip(record));
@@ -412,6 +440,8 @@ function syncMarkerRecord(record, item) {
       record.marker.setLatLng([item.lat, item.lng]);
     }
   }
+
+  applyMarkerScale(record);
 }
 
 function syncMarkers() {
@@ -445,6 +475,7 @@ watch(
       cursorState.url = cursorUrlForKind(cursorState.kind);
     }
     syncMarkers();
+    syncMarkerScales();
   },
   { immediate: true }
 );

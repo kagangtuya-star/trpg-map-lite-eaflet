@@ -998,7 +998,8 @@ button.ghost {
   height: 18px;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22), 0 0 18px rgba(245, 158, 11, 0.84);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
+  transform-origin: center center;
 }
 
 .magic-marker-hit-area {

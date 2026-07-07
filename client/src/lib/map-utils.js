@@ -67,6 +67,12 @@ export function markerSizeStyle(iconStyle = '') {
   return `width:${width}px;height:${height}px;`;
 }
 
+export function markerArtSize(iconStyle = '') {
+  const width = Number(String(iconStyle).match(/width:\s*(\d+)px/)?.[1] || 32);
+  const height = Number(String(iconStyle).match(/height:\s*(\d+)px/)?.[1] || width);
+  return { width, height };
+}
+
 export function markerInteractionSize(iconStyle = '', minimumSize = 40) {
   const { width, height } = markerArtSize(iconStyle);
   return {
@@ -75,10 +81,18 @@ export function markerInteractionSize(iconStyle = '', minimumSize = 40) {
   };
 }
 
-function markerArtSize(iconStyle = '') {
-  const width = Number(String(iconStyle).match(/width:\s*(\d+)px/)?.[1] || 32);
-  const height = Number(String(iconStyle).match(/height:\s*(\d+)px/)?.[1] || width);
-  return { width, height };
+export function markerRenderMetrics(iconStyle = '', { currentZoom, nativeZoom, minimumHitSize = 40 } = {}) {
+  const artSize = markerArtSize(iconStyle);
+  const interactionSize = markerInteractionSize(iconStyle, minimumHitSize);
+  const zoomDelta =
+    Number.isFinite(currentZoom) && Number.isFinite(nativeZoom) ? Number(currentZoom) - Number(nativeZoom) : 0;
+  return {
+    artWidth: artSize.width,
+    artHeight: artSize.height,
+    interactionWidth: interactionSize.width,
+    interactionHeight: interactionSize.height,
+    scale: 2 ** zoomDelta
+  };
 }
 
 export function buildCampaignFormData(input) {
