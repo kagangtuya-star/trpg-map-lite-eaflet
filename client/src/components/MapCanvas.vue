@@ -27,6 +27,7 @@ let map;
 let markerLayer;
 let coordControl;
 let mapContainer;
+let customCursorElement;
 let resizeObserver;
 let mapDraggingPausedForMarker = false;
 let markerRecords = new Map();
@@ -171,6 +172,12 @@ function initMap() {
   mapContainer = map.getContainer();
   mapContainer.addEventListener('pointermove', updateCustomCursor);
   mapContainer.addEventListener('pointerleave', hideCustomCursor);
+  customCursorElement = document.createElement('img');
+  customCursorElement.className = 'map-custom-cursor';
+  customCursorElement.alt = '';
+  customCursorElement.setAttribute('aria-hidden', 'true');
+  customCursorElement.draggable = false;
+  mapContainer.appendChild(customCursorElement);
   if (typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(resizeMapToContainer);
     resizeObserver.observe(mapContainer);
@@ -231,8 +238,20 @@ function cursorUrlForKind(kind) {
   return kind === 'pointer' ? props.campaign.pointer_cursor_url : props.campaign.default_cursor_url;
 }
 
+function renderCustomCursor() {
+  if (!customCursorElement) return;
+  const visible = cursorState.visible && Boolean(cursorState.url);
+  customCursorElement.style.display = visible ? 'block' : 'none';
+  if (!visible) return;
+  customCursorElement.src = cursorState.url;
+  customCursorElement.className = `map-custom-cursor map-custom-cursor--${cursorState.kind}`;
+  customCursorElement.style.left = `${cursorState.x}px`;
+  customCursorElement.style.top = `${cursorState.y}px`;
+}
+
 function hideCustomCursor() {
   cursorState.visible = false;
+  renderCustomCursor();
 }
 
 function updateCustomCursor(event) {
@@ -245,12 +264,12 @@ function updateCustomCursor(event) {
     return;
   }
   const rect = mapContainer.getBoundingClientRect();
-  const kind = isPointerTarget(event.target) ? 'pointer' : 'default';
   cursorState.visible = true;
   cursorState.x = event.clientX - rect.left;
   cursorState.y = event.clientY - rect.top;
-  cursorState.kind = kind;
-  cursorState.url = cursorUrlForKind(kind);
+  cursorState.kind = isPointerTarget(event.target) ? 'pointer' : 'default';
+  cursorState.url = cursorUrlForKind(cursorState.kind);
+  renderCustomCursor();
 }
 
 function emitMarkerClick(item) {
@@ -282,16 +301,6 @@ async function focusMarker(marker) {
   map.panTo([marker.lat, marker.lng], { animate: false });
   const point = map.latLngToContainerPoint([marker.lat, marker.lng]);
   return { x: point.x, y: point.y };
-}
-
-function updatePlacementCursor() {
-  const container = document.getElementById('map');
-  if (!container) return;
-  if (props.mode === 'edit' && props.activeTool === 'marker') {
-    container.style.setProperty('cursor', 'crosshair', 'important');
-  } else {
-    container.style.removeProperty('cursor');
-  }
 }
 
 function canDragMarkers() {
@@ -395,7 +404,6 @@ function syncMarkerScales() {
 }
 
 function pauseMapDraggingForMarkerDrag() {
-  hideCustomCursor();
   if (!map?.dragging?.enabled?.()) return;
   map.dragging.disable();
   mapDraggingPausedForMarker = true;
@@ -529,10 +537,14 @@ watch(
   async () => {
     await nextTick();
     initMap();
-    applyDynamicCursors(props.campaign);
-    updatePlacementCursor();
-    if (cursorState.visible) {
+    applyDynamicCursors(props.campaign, {
+      placementMode: props.mode === 'edit' && props.activeTool === 'marker'
+    });
+    if (props.mode === 'edit' && props.activeTool === 'marker') {
+      hideCustomCursor();
+    } else if (cursorState.visible) {
       cursorState.url = cursorUrlForKind(cursorState.kind);
+      renderCustomCursor();
     }
     syncMarkers();
     syncMarkerScales();
@@ -547,6 +559,9 @@ onBeforeUnmount(() => {
     mapContainer.removeEventListener('pointermove', updateCustomCursor);
     mapContainer.removeEventListener('pointerleave', hideCustomCursor);
   }
+  customCursorElement?.remove();
+  customCursorElement = undefined;
+  mapContainer = undefined;
   if (map) {
     map.remove();
     map = undefined;
@@ -566,14 +581,5 @@ defineExpose({
     :style="{ '--map-aspect-ratio': mapAspectRatio() }"
   >
     <div id="map" class="h-full w-full"></div>
-    <img
-      v-if="cursorState.visible && cursorState.url"
-      class="map-custom-cursor"
-      :class="`map-custom-cursor--${cursorState.kind}`"
-      :src="cursorState.url"
-      :style="{ left: `${cursorState.x}px`, top: `${cursorState.y}px` }"
-      alt=""
-      aria-hidden="true"
-    />
   </div>
 </template>

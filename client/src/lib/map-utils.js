@@ -7,7 +7,19 @@ export function buildApiPath(template, params = {}) {
   );
 }
 
-export function buildCursorStyleText(campaign) {
+export function buildCursorStyleText(campaign, { placementMode = false } = {}) {
+  if (placementMode) {
+    return `
+      #map,
+      .leaflet-container,
+      .leaflet-interactive,
+      .leaflet-marker-icon,
+      .magic-marker-shell {
+        cursor: crosshair !important;
+      }
+    `;
+  }
+
   return `
     #map {
       cursor: none !important;
@@ -24,18 +36,14 @@ export function buildCursorStyleText(campaign) {
   `;
 }
 
-export function applyDynamicCursors(campaign, styleId = 'campaign-cursor-style') {
+export function applyDynamicCursors(campaign, options = {}, styleId = 'campaign-cursor-style') {
   let style = document.getElementById(styleId);
   if (!style) {
     style = document.createElement('style');
     style.id = styleId;
     document.head.appendChild(style);
   }
-  style.innerHTML = buildCursorStyleText(campaign);
-  const mapContainer = document.getElementById('map');
-  if (mapContainer) {
-    mapContainer.style.setProperty('cursor', 'none', 'important');
-  }
+  style.innerHTML = buildCursorStyleText(campaign, options);
 }
 
 export function formatLatLng(latlng) {

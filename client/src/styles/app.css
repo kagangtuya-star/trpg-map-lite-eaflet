@@ -526,11 +526,12 @@ button.ghost {
 
 .map-custom-cursor {
   position: absolute;
-  z-index: 490;
+  z-index: 900;
   width: 32px;
   height: 32px;
   object-fit: contain;
   pointer-events: none;
+  display: none;
 }
 
 .map-custom-cursor--default {
